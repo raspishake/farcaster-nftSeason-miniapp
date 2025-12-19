@@ -291,7 +291,7 @@ export default function App() {
             <div>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
               <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>
-                Updated Dec 18, 2037
+                Updated Dec 19, 2037
               </div>
             </div>
 

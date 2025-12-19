@@ -16,15 +16,14 @@ missing data:
 add these collections:
 
 - OG NFT
-- Farape
+
+missing data:
 - FID Azuki | over | https://opensea.io/collection/fidazuki | @ritukumari.eth
 - warplet mfer | https://warpletmfers.frm.lol/warpletmfers/app
 - warplet noun | https://warpletnouns.frm.lol/warpletnouns/app
 - warplet babies | https://warpletbabies.frm.lol/warpletbabies
-- the barcode
-- farcaster constellation
-- 
+- and other new additions
 
-add new categories:
-- warplet derivatives - arblet, warplet mfer, warplet noun, sheeplet, warplet baby, petlet
-- FID mints - warplet, arblet, fid punks, warplet mfer, fid azuki, farape, farcaster dino, warplet noun, warplet baby, howler, petlet
+add (see bookmarks):
+ - based build
+ - sophlets

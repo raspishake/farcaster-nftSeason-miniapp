@@ -1,6 +1,6 @@
 // src/data/collections.ts
 
-export type Network = "Base" | "Arbitrum" | "Ethereum"
+export type Network = "Base" | "Arbitrum" | "Degen" | "Ethereum"
 
 export type Collection = {
   id: string
@@ -98,7 +98,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://farcaster.xyz/miniapps/JBWDbpN3nSow/pixel-nouns",
     opensea: "https://explorer.degen.tips/token/0x6fB0F96Bb2dCD32388eBBB6b13608928Ed538218",
-    network: "Base",
+    network: "Degen",
     thumbnail: TMP_THUMB
   },
 
