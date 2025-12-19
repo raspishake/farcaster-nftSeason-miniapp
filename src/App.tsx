@@ -1,6 +1,7 @@
+// src/App.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { sdk } from "@farcaster/miniapp-sdk"
-import { groups, type Collection, type Group } from "./data/collections"
+import { collectionsById, groups, type Collection, type Group } from "./data/collections"
 
 type TabKey = string
 
@@ -13,13 +14,47 @@ function isProbablyHandleToken(token: string): boolean {
   return /^@[a-z0-9][a-z0-9\-_.]{0,63}$/i.test(token)
 }
 
+function toMiniAppOpenUrl(raw: string): string {
+  const s = raw.trim()
+  if (!s) return s
+
+  // openMiniApp wants a url-like string, examples omit protocol.
+  // Normalize to "host/path?query" without protocol and without trailing fragments.
+  const withoutProtocol = s.replace(/^https?:\/\//i, "")
+  const withoutHash = withoutProtocol.split("#")[0] ?? withoutProtocol
+
+  // collapse accidental double slashes after host
+  const parts = withoutHash.split("/")
+  if (parts.length <= 1) return withoutHash
+
+  const host = parts[0] ?? ""
+  const rest = parts.slice(1).filter(Boolean).join("/")
+  return rest ? `${host}/${rest}` : host
+}
+
 async function safeOpenUrl(url: string): Promise<void> {
   try {
     await sdk.actions.openUrl(url)
     return
   } catch {
-    // fallback for environments where sdk.openUrl fails silently
     window.location.href = url
+  }
+}
+
+async function openMiniAppOrUrl(url: string): Promise<void> {
+  const trimmed = url.trim()
+  if (!trimmed) return
+
+  const openMiniAppUrl = toMiniAppOpenUrl(trimmed)
+
+  try {
+    // This is the “seamless opening from within a miniapp” path.
+    await sdk.actions.openMiniApp({ url: openMiniAppUrl })
+    return
+  } catch {
+    // Fallback for environments where openMiniApp fails for non-miniapp URLs.
+    const finalUrl = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+    await safeOpenUrl(finalUrl)
   }
 }
 
@@ -34,15 +69,12 @@ async function resolveFidByUsername(username: string): Promise<number | null> {
     const fid = data?.result?.user?.fid ?? data?.user?.fid ?? data?.result?.fid ?? null
     return typeof fid === "number" ? fid : null
   } catch {
-    // CORS/network policy in Farcaster webview can throw
     return null
   }
 }
 
 async function viewProfileByHandle(handle: string, fidCache: Map<string, number>): Promise<void> {
   const h = normalizeHandle(handle).toLowerCase()
-
-  // If the SDK profile view fails, always fall back to warpcast URL
   const fallback = async () => safeOpenUrl(`https://warpcast.com/${encodeURIComponent(h)}`)
 
   try {
@@ -120,14 +152,12 @@ function RichText({
   )
 }
 
-function primaryActionLabel(groupTitle: string): string {
-  if (groupTitle === "You missed the Boat") return "OpenSea"
-  return groupTitle === "Be Early" ? "Allow List" : "Mint"
-}
+function primaryActionLabel(groupTitle: string, primaryUrl: string | null): string {
+  const url = (primaryUrl ?? "").toLowerCase()
 
-function pickFeatured(group: Group): Collection | null {
-  const f = group.items.find((c: Collection) => c.featured)
-  return f ?? null
+  if (url.includes("opensea.io")) return "OpenSea"
+  if (groupTitle === "Be Early") return "Allow List"
+  return "Mint"
 }
 
 function collectionPrimaryUrl(c: Collection, groupTitle: string): string | null {
@@ -175,12 +205,26 @@ export default function App() {
   }, [])
 
   const activeGroup = groupsByTitle.get(activeTab) ?? groups[0]
-  const featured = useMemo(() => pickFeatured(activeGroup), [activeGroup])
+
+  const featured: Collection | null = useMemo(() => {
+    if (!activeGroup.featuredId) return null
+    return collectionsById[activeGroup.featuredId] ?? null
+  }, [activeGroup])
+
+  const resolvedItems: Collection[] = useMemo(() => {
+    const ids = activeGroup.itemIds ?? []
+    const list: Collection[] = []
+    for (const id of ids) {
+      const c = collectionsById[id]
+      if (c) list.push(c)
+    }
+    return list
+  }, [activeGroup])
 
   // Featured should ONLY appear at top, never in list.
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const base = activeGroup.items.filter((c: Collection) => !c.featured)
+    const base = resolvedItems.filter((c: Collection) => c.id !== activeGroup.featuredId)
 
     if (!q) return base
 
@@ -189,22 +233,21 @@ export default function App() {
       const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
       return hay.includes(q)
     })
-  }, [activeGroup, query])
+  }, [resolvedItems, query, activeGroup.featuredId])
 
   async function onOpenPrimary(c: Collection): Promise<void> {
     const url = collectionPrimaryUrl(c, activeGroup.title)
     if (!url) return
-    await safeOpenUrl(url)
+    await openMiniAppOrUrl(url)
   }
 
   async function onOpenSecondary(c: Collection): Promise<void> {
     const url = collectionSecondaryUrl(c, activeGroup.title)
     if (!url) return
-    await safeOpenUrl(url)
+    await openMiniAppOrUrl(url)
   }
 
   function onHandleClick(handle: string): void {
-    // fire-and-forget, but not silently failing
     void viewProfileByHandle(handle, fidCacheRef.current)
   }
 
@@ -392,7 +435,7 @@ export default function App() {
                     <span style={{ color: "rgba(255,255,255,0.6)" }}>Creators: </span>
                     {featured.creators.length ? (
                       featured.creators.map((cr: string, i: number) => (
-                        <React.Fragment key={`${featured.name}-cr-${i}`}>
+                        <React.Fragment key={`${featured.id}-cr-${i}`}>
                           {i > 0 ? ", " : ""}
                           <button
                             onClick={() => onHandleClick(cr)}
@@ -430,7 +473,7 @@ export default function App() {
                         cursor: "pointer"
                       }}
                     >
-                      {primaryActionLabel(activeGroup.title)}
+			{primaryActionLabel(activeGroup.title, collectionPrimaryUrl(featured, activeGroup.title))}
                     </button>
                   ) : null}
 
@@ -463,7 +506,7 @@ export default function App() {
 
               return (
                 <div
-                  key={`${activeGroup.title}-${c.name}`}
+                  key={`${activeGroup.title}-${c.id}`}
                   style={{
                     borderRadius: 16,
                     border: "1px solid rgba(255,255,255,0.12)",
@@ -509,7 +552,7 @@ export default function App() {
                       <span style={{ color: "rgba(255,255,255,0.55)" }}>Creators: </span>
                       {c.creators.length ? (
                         c.creators.map((cr: string, i: number) => (
-                          <React.Fragment key={`${c.name}-creator-${i}`}>
+                          <React.Fragment key={`${c.id}-creator-${i}`}>
                             {i > 0 ? ", " : ""}
                             <button
                               onClick={() => onHandleClick(cr)}
@@ -548,7 +591,7 @@ export default function App() {
                           minWidth: 92
                         }}
                       >
-                        {primaryActionLabel(activeGroup.title)}
+			{primaryActionLabel(activeGroup.title, primaryUrl)}
                       </button>
                     ) : null}
 
