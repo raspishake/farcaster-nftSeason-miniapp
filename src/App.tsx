@@ -221,19 +221,26 @@ export default function App() {
     return list
   }, [activeGroup])
 
-  // Featured should ONLY appear at top, never in list.
-  const filteredItems = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const base = resolvedItems.filter((c: Collection) => c.id !== activeGroup.featuredId)
+  // Featured should ONLY appear at top, never in list/ sorting alphabetical by name.
+const filteredItems = useMemo(() => {
+  const q = query.trim().toLowerCase()
 
-    if (!q) return base
-
-    return base.filter((c: Collection) => {
+  const base = resolvedItems
+    .filter((c: Collection) => c.id !== activeGroup.featuredId)
+    .filter((c: Collection) => {
+      if (!q) return true
       const creators = c.creators.join(" ")
       const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
       return hay.includes(q)
     })
-  }, [resolvedItems, query, activeGroup.featuredId])
+
+  // Sort alphabetically (case-insensitive)
+  base.sort((a: Collection, b: Collection) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  )
+
+  return base
+}, [resolvedItems, query, activeGroup.featuredId])
 
   async function onOpenPrimary(c: Collection): Promise<void> {
     const url = collectionPrimaryUrl(c, activeGroup.title)
@@ -628,7 +635,7 @@ export default function App() {
             lineHeight: 1.35
           }}
         >
-          <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>IT IS NFT SEASON ON FC!</div>
+          <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>IT IS NFT PFP PVP SZN ON Farcaster!</div>
           <div style={{ marginTop: 6 }}>
             <RichText
               text="@opensea is either late to the party or completely MIA but we are minting the collections that define this cycle."
