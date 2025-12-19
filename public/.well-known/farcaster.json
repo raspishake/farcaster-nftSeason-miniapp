@@ -9,8 +9,8 @@
     "name": "NFT Season",
     "description": "One-stop-shop for new and ongoing NFT mints on Farcaster.",
     "homeUrl": "https://nft-season.vercel.app",
-    "iconUrl": "https://nft-season.vercel.app/thumbs/tmp.png",
-    "splashImageUrl": "https://nft-season.vercel.app/thumbs/tmp.png",
+    "iconUrl": "https://nft-season.vercel.app/thumbs/miniapp.png",
+    "splashImageUrl": "https://nft-season.vercel.app/thumbs/miniapp.png",
     "tags": ["nft", "mint", "base", "farcaster"],
     "developer": {
       "name": "@raspishake",

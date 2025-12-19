@@ -116,16 +116,8 @@ function collectionSecondaryUrl(c: Collection, groupTitle: string): string | nul
   return null
 }
 
-function formatIsoDate(iso: string): string {
-  // Expecting YYYY-MM-DD
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim())
-  if (!m) return iso
-  const yyyy = Number(m[1])
-  const mm = Number(m[2])
-  const dd = Number(m[3])
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-  const mon = months[Math.max(0, Math.min(11, mm - 1))]
-  return `${mon} ${dd}, ${yyyy}`
+const featuredPulseStyle: React.CSSProperties = {
+  animation: "featuredPulseGlow 2.4s ease-in-out infinite"
 }
 
 export default function App() {
@@ -154,11 +146,14 @@ export default function App() {
   const activeGroup = groupsByTitle.get(activeTab) ?? groups[0]
   const featured = useMemo(() => pickFeatured(activeGroup), [activeGroup])
 
+  // IMPORTANT: featured should appear ONLY at the top, not in the list.
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return activeGroup.items
+    const base = activeGroup.items.filter((c: Collection) => !c.featured)
 
-    return activeGroup.items.filter((c: Collection) => {
+    if (!q) return base
+
+    return base.filter((c: Collection) => {
       const creators = c.creators.join(" ")
       const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
       return hay.includes(q)
@@ -194,6 +189,16 @@ export default function App() {
         padding: 14
       }}
     >
+      <style>
+        {`
+          @keyframes featuredPulseGlow {
+            0%   { box-shadow: 0 0 0 0 rgba(138,180,255,0.45); }
+            70%  { box-shadow: 0 0 0 6px rgba(138,180,255,0); }
+            100% { box-shadow: 0 0 0 0 rgba(138,180,255,0); }
+          }
+        `}
+      </style>
+
       <div
         style={{
           width: "100%",
@@ -211,7 +216,7 @@ export default function App() {
             <div>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
               <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>
-                Updated {formatIsoDate(activeGroup.lastUpdated)}
+                Updated December 18, 2037
               </div>
             </div>
 
@@ -292,7 +297,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Featured */}
+          {/* Featured (ONLY here, never in list) */}
           {featured ? (
             <div
               style={{
@@ -322,6 +327,7 @@ export default function App() {
                     <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 0.2 }}>{featured.name}</div>
                     <span
                       style={{
+                        ...featuredPulseStyle,
                         fontSize: 11,
                         padding: "3px 8px",
                         borderRadius: 999,
@@ -450,21 +456,6 @@ export default function App() {
                   <div style={{ minWidth: 0, flex: "1 1 auto" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <div style={{ fontSize: 15.5, fontWeight: 900, letterSpacing: 0.1 }}>{c.name}</div>
-                      {c.featured ? (
-                        <span
-                          style={{
-                            fontSize: 10.5,
-                            padding: "3px 7px",
-                            borderRadius: 999,
-                            background: "rgba(138,180,255,0.15)",
-                            border: "1px solid rgba(138,180,255,0.30)",
-                            color: "#cfe0ff",
-                            fontWeight: 900
-                          }}
-                        >
-                          FEATURED
-                        </span>
-                      ) : null}
                       <span
                         style={{
                           fontSize: 10.5,
@@ -516,7 +507,7 @@ export default function App() {
                           padding: "10px 12px",
                           borderRadius: 12,
                           border: "1px solid rgba(255,255,255,0.16)",
-                          background: c.featured ? "rgba(138,180,255,0.18)" : "rgba(255,255,255,0.06)",
+                          background: "rgba(255,255,255,0.06)",
                           color: "rgba(255,255,255,0.92)",
                           fontWeight: 900,
                           cursor: "pointer",
