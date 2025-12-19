@@ -261,7 +261,7 @@ export const collectionsById: Record<string, Collection> = {
     thumbnail: TMP_THUMB
   },
 
-  // New (placeholders, you’ll fill in)
+  // More projects
   "of-nft": {
     id: "of-nft",
     name: "OF NFT",
@@ -340,6 +340,24 @@ export const collectionsById: Record<string, Collection> = {
     creators: [],
     network: "Arbitrum",
     thumbnail: TMP_THUMB
+  },
+
+  "based-build": {
+    id: "based-build",
+    name: "Based Build",
+    creators: ["@mevmonk"],
+    miniapp: "https://basedbuilds.xyz/share?token=3&tx=0x0c33ab7d327ee94e28b1714a174fe097cdd251ee222d13799da23e559636c1b6",
+    network: "Base",
+    thumbnail: TMP_THUMB
+  },
+
+  sophlet: {
+    id: "sophlet",
+    name: "Sophlets",
+    creators: ["@chriscocreated"],
+    miniapp: "https://immutagen.ai/mint/d964d9a2-6707-4b3e-98a5-c505ae0d04d1?generationId=978c332b-aa9d-42c0-b8d0-7c044ca023a9",
+    network: "Base",
+    thumbnail: TMP_THUMB
   }
 }
 
@@ -367,7 +385,7 @@ export const groups: Group[] = [
   },
 
   {
-    title: "We are Live",
+    title: "New Launches",
     description: "Time to click buttons. The following limited edition mints are Live.",
     lastUpdated: "Dec 18, 2037",
     featuredId: "protardio",
@@ -375,7 +393,9 @@ export const groups: Group[] = [
       "protardio",
       "petlets",
       "frosty-friends",
-      "waifu"
+      "waifu",
+      "sophlet",
+      "based-build"
     ]
   },
 
@@ -441,7 +461,9 @@ export const groups: Group[] = [
       "warplet-nouns",
       "warplet-babies",
       "howlers",
-      "petlets"
+      "petlets",
+      "sophlet",
+      "tiny-turtles"
     ]
   },
 
@@ -457,7 +479,7 @@ export const groups: Group[] = [
       "warplet-nouns",
       "warplet-babies",
       "arblets",
-      "sheeplets"
+      "sheeplet"
     ]
   }
 ]

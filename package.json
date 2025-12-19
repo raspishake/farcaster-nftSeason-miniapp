@@ -21,7 +21,14 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.2.1",
     "@wagmi/cli": "latest",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.5",
     "vite": "^5.2.11"
+  },
+  "scripts": {
+    "validate:data": "tsx scripts/validate-data.ts",
+    "prebuild": "npm run validate:data",
+    "build": "tsc && vite build",
+    "dev": "vite"
   }
 }
