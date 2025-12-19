@@ -10,6 +10,8 @@
     "description": "One-stop-shop for new and ongoing NFT mints on Farcaster.",
     "homeUrl": "https://nft-season.vercel.app",
     "iconUrl": "https://nft-season.vercel.app/thumbs/miniapp.png",
+    "splashBackgroundColor": "#000000",
+    "themeColor": "#000000",
     "splashImageUrl": "https://nft-season.vercel.app/thumbs/miniapp.png",
     "tags": ["nft", "mint", "base", "farcaster"],
     "developer": {
