@@ -111,16 +111,17 @@ export const groups: Group[] = [
     lastUpdated: "2025-09-18",
     items: [
       {
-        name: "Pixel Noun",
+        name: "Pixel Nouns Bot",
         creators: ["@markcarey"],
         miniapp: "https://farcaster.xyz/miniapps/JBWDbpN3nSow/pixel-nouns",
-        network: "Base",
+        opensea: "https://explorer.degen.tips/token/0x6fB0F96Bb2dCD32388eBBB6b13608928Ed538218",
+	network: "Degen",
         featured: true,
         thumbnail: TMP_THUMB
       },
       {
         name: "Paint People",
-        creators: ["@dario1234", "@iamtaylor"],
+        creators: ["@iamtaylor"],
         miniapp: "http://paintpeople.vercel.app/",
         network: "Base",
         featured: false,
@@ -144,7 +145,7 @@ export const groups: Group[] = [
         thumbnail: TMP_THUMB
       },
       {
-        name: "FarPixel cats",
+        name: "FarPixel Cats",
         creators: ["@farpixel", "@attilagaliba.eth"],
         miniapp: "https://farcaster.xyz/miniapps/dU0eSxtWRBvf/farpixel",
         opensea: "https://opensea.io/collection/farpixelcats",
@@ -157,7 +158,8 @@ export const groups: Group[] = [
         creators: ["@mfbevan.eth"],
         miniapp:
           "https://immutagen.ai/mint/c1244fe2-7b40-43c4-871f-c8ed4c13ab83?generationId=6838adb0-e66e-4229-8350-91b518b46efd",
-        network: "Base",
+        opensea: "https://opensea.io/collection/the-tiny-turtles/",
+	network: "Base",
         featured: false,
         thumbnail: TMP_THUMB
       },
@@ -197,7 +199,7 @@ export const groups: Group[] = [
       {
         name: "Sheeplet",
         creators: ["@basewtf"],
-        network: "Arbitrum",
+        network: "Base",
         featured: false,
         thumbnail: TMP_THUMB
       },
