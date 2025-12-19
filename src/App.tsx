@@ -1,396 +1,279 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { sdk } from "@farcaster/miniapp-sdk"
-import { groups, type Group, type Collection } from "./data/collections"
+import { groups, type Collection, type Group } from "./data/collections"
 
-const UPDATED_TEXT = "Updated Dec 18, 2025"
+type TabKey = string
 
-function inMiniApp(): boolean {
-  try {
-    return !!sdk?.actions
-  } catch {
-    return false
-  }
+function normalizeHandle(handle: string): string {
+  const h = handle.trim()
+  return h.startsWith("@") ? h.slice(1) : h
 }
 
-async function openUrl(url: string) {
-  if (!url) return
-  if (inMiniApp()) {
-    await sdk.actions.openUrl(url)
+function isProbablyHandleToken(token: string): boolean {
+  return /^@[a-z0-9][a-z0-9\-_.]{0,63}$/i.test(token)
+}
+
+async function openUrl(url: string): Promise<void> {
+  await sdk.actions.openUrl(url)
+}
+
+async function resolveFidByUsername(username: string): Promise<number | null> {
+  const u = normalizeHandle(username)
+  const endpoint = `https://api.warpcast.com/v2/user-by-username?username=${encodeURIComponent(u)}`
+  const res = await fetch(endpoint, { method: "GET" })
+  if (!res.ok) return null
+  const data = (await res.json()) as any
+  const fid = data?.result?.user?.fid ?? data?.user?.fid ?? data?.result?.fid ?? null
+  return typeof fid === "number" ? fid : null
+}
+
+async function viewProfileByHandle(handle: string, fidCache: Map<string, number>): Promise<void> {
+  const h = normalizeHandle(handle).toLowerCase()
+
+  const cached = fidCache.get(h)
+  if (typeof cached === "number") {
+    await sdk.actions.viewProfile({ fid: cached })
     return
   }
-  window.open(url, "_blank", "noopener,noreferrer")
-}
 
-async function openFarcasterProfile(handle: string) {
-  const h = handle.trim().startsWith("@") ? handle.trim() : `@${handle.trim()}`
-  const uri = `farcaster://${h}`
-  if (inMiniApp()) {
-    await sdk.actions.openUrl(uri)
+  const fid = await resolveFidByUsername(h)
+  if (typeof fid === "number") {
+    fidCache.set(h, fid)
+    await sdk.actions.viewProfile({ fid })
     return
   }
-  await openUrl(`https://warpcast.com/${h.replace(/^@/, "")}`)
+
+  await openUrl(`https://warpcast.com/${encodeURIComponent(h)}`)
 }
 
-function normalize(s: string) {
-  return (s || "").toLowerCase().trim()
+function RichText({
+  text,
+  onHandleClick,
+  linkColor = "#8ab4ff"
+}: {
+  text: string
+  onHandleClick: (handle: string) => void
+  linkColor?: string
+}) {
+  const parts = useMemo(() => text.split(/(\s+)/), [text])
+
+  return (
+    <>
+      {parts.map((p, idx) => {
+        if (!p.trim()) return <React.Fragment key={idx}>{p}</React.Fragment>
+
+        const stripped = p.replace(/[),.;:!?]+$/g, "")
+        if (isProbablyHandleToken(stripped)) {
+          return (
+            <button
+              key={idx}
+              onClick={() => onHandleClick(stripped)}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                margin: 0,
+                color: linkColor,
+                cursor: "pointer",
+                fontWeight: 700
+              }}
+              title={`Open @${normalizeHandle(stripped)} on Farcaster`}
+            >
+              {p}
+            </button>
+          )
+        }
+
+        return <React.Fragment key={idx}>{p}</React.Fragment>
+      })}
+    </>
+  )
 }
 
-function normalizeHandles(creators: string[] | undefined): string[] {
-  const list = creators ?? []
-  return list
-    .map(x => (x || "").trim())
-    .filter(Boolean)
-    .map(x => (x.startsWith("@") ? x : `@${x}`))
-}
-
-function primaryLabel(groupTitle: string) {
+function primaryActionLabel(groupTitle: string): string {
   return groupTitle === "Be Early" ? "Allow List" : "Mint"
 }
 
-function actionLabel(groupTitle: string) {
-  return groupTitle === "You missed the Boat" ? "OpenSea" : primaryLabel(groupTitle)
+function pickFeatured(group: Group): Collection | null {
+  const f = group.items.find((c: Collection) => c.featured)
+  return f ?? null
 }
 
-function bestPrimaryUrl(c: Collection, groupTitle: string) {
+function collectionPrimaryUrl(c: Collection, groupTitle: string): string | null {
   if (groupTitle === "You missed the Boat") {
-    if (c.opensea && normalize(c.opensea) !== "n/a") return c.opensea
-    return ""
+    if (c.opensea && c.opensea.trim() && c.opensea !== "N/A") return c.opensea
+    return null
   }
-  if (c.miniapp && normalize(c.miniapp) !== "tba" && normalize(c.miniapp) !== "n/a") return c.miniapp
-  if (c.opensea && normalize(c.opensea) !== "n/a") return c.opensea
-  return ""
+
+  if (c.miniapp && c.miniapp.trim() && c.miniapp !== "N/A" && c.miniapp !== "TBA") return c.miniapp
+  if (c.opensea && c.opensea.trim() && c.opensea !== "N/A") return c.opensea
+  return null
 }
 
-function Badge({ text }: { text: string }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "3px 8px",
-        borderRadius: 999,
-        fontSize: 11,
-        fontWeight: 700,
-        background: "rgba(255,255,255,0.08)",
-        border: "1px solid rgba(255,255,255,0.14)"
-      }}
-    >
-      {text}
-    </span>
-  )
+function collectionSecondaryUrl(c: Collection, groupTitle: string): string | null {
+  if (groupTitle === "You missed the Boat") return null
+  if (c.miniapp && c.opensea && c.opensea !== "N/A") return c.opensea
+  return null
 }
 
-function FeaturedBadge() {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 10px",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 800,
-        background: "rgba(255,255,255,0.12)",
-        border: "1px solid rgba(255,255,255,0.26)",
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.06)"
-      }}
-    >
-      ✨ Featured
-    </span>
-  )
-}
-
-function Tile({
-  c,
-  groupTitle,
-  featured
-}: {
-  c: Collection
-  groupTitle: string
-  featured: boolean
-}) {
-  const handles = normalizeHandles(c.creators)
-  const primaryUrl = bestPrimaryUrl(c, groupTitle)
-
-  const hasOpenSea = Boolean(c.opensea && normalize(c.opensea) !== "n/a")
-  const hasMiniapp = Boolean(c.miniapp && normalize(c.miniapp) !== "n/a" && normalize(c.miniapp) !== "tba")
-
-  const tileStyle: React.CSSProperties = featured
-    ? {
-        border: "1px solid rgba(255,255,255,0.36)",
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.10), 0 18px 50px rgba(0,0,0,0.60)",
-        background: "linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06))"
-      }
-    : {
-        border: "1px solid rgba(255,255,255,0.14)",
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.04)",
-        background: "rgba(255,255,255,0.05)"
-      }
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "56px 1fr auto",
-        gap: 14,
-        padding: featured ? 16 : 14,
-        borderRadius: 16,
-        ...tileStyle
-      }}
-    >
-      <img
-        src={c.thumbnail}
-        alt={`${c.name} thumbnail`}
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 14,
-          objectFit: "cover",
-          border: featured ? "1px solid rgba(255,255,255,0.30)" : "1px solid rgba(255,255,255,0.18)"
-        }}
-      />
-
-      <div style={{ minWidth: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10
-          }}
-        >
-          <div
-            style={{
-              fontSize: featured ? 17 : 16,
-              fontWeight: 900,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              minWidth: 0
-            }}
-            title={c.name}
-          >
-            {c.name}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {c.featured ? <FeaturedBadge /> : null}
-            <Badge text={c.network} />
-          </div>
-        </div>
-
-        <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {handles.length ? (
-            <>
-              <span style={{ opacity: 0.75, fontSize: 13 }}>by</span>
-              {handles.map(h => (
-                <button
-                  key={h}
-                  onClick={() => openFarcasterProfile(h)}
-                  style={{
-                    appearance: "none",
-                    border: "1px solid rgba(255,255,255,0.16)",
-                    background: "rgba(255,255,255,0.06)",
-                    color: "rgba(255,255,255,0.92)",
-                    borderRadius: 999,
-                    padding: "4px 10px",
-                    fontSize: 13,
-                    fontWeight: 800,
-                    cursor: "pointer"
-                  }}
-                  title={`Open ${h} on Farcaster`}
-                >
-                  {h}
-                </button>
-              ))}
-            </>
-          ) : (
-            <span style={{ opacity: 0.70, fontSize: 13 }}>by N/A</span>
-          )}
-        </div>
-
-        <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {hasMiniapp ? (
-            <button
-              onClick={() => openUrl(c.miniapp!)}
-              style={{
-                appearance: "none",
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "transparent",
-                color: "rgba(255,255,255,0.80)",
-                borderRadius: 12,
-                padding: "8px 10px",
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: "pointer"
-              }}
-              title={c.miniapp}
-            >
-              Mini App ↗
-            </button>
-          ) : null}
-
-          {hasOpenSea ? (
-            <button
-              onClick={() => openUrl(c.opensea!)}
-              style={{
-                appearance: "none",
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "transparent",
-                color: "rgba(255,255,255,0.80)",
-                borderRadius: 12,
-                padding: "8px 10px",
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: "pointer"
-              }}
-              title={c.opensea}
-            >
-              OpenSea ↗
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <button
-          disabled={!primaryUrl}
-          onClick={() => primaryUrl && openUrl(primaryUrl)}
-          style={{
-            appearance: "none",
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: primaryUrl ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
-            color: primaryUrl ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.35)",
-            borderRadius: 14,
-            padding: featured ? "12px 14px" : "10px 12px",
-            fontSize: 13,
-            fontWeight: 900,
-            cursor: primaryUrl ? "pointer" : "not-allowed",
-            minWidth: 110
-          }}
-          title={primaryUrl || "No link set"}
-        >
-          {actionLabel(groupTitle)}
-        </button>
-      </div>
-    </div>
-  )
+function formatIsoDate(iso: string): string {
+  // Expecting YYYY-MM-DD
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim())
+  if (!m) return iso
+  const yyyy = Number(m[1])
+  const mm = Number(m[2])
+  const dd = Number(m[3])
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  const mon = months[Math.max(0, Math.min(11, mm - 1))]
+  return `${mon} ${dd}, ${yyyy}`
 }
 
 export default function App() {
-  const [activeIdx, setActiveIdx] = useState(0)
+  const [activeTab, setActiveTab] = useState<TabKey>(groups[0]?.title ?? "NFTs")
   const [query, setQuery] = useState("")
+  const [readyCalled, setReadyCalled] = useState(false)
+
+  const fidCacheRef = useRef<Map<string, number>>(new Map())
 
   useEffect(() => {
     ;(async () => {
       try {
-        if (inMiniApp()) await sdk.actions.ready()
-      } catch {
-        // ignore
+        await sdk.actions.ready({ disableNativeGestures: true })
+      } finally {
+        setReadyCalled(true)
       }
     })()
   }, [])
 
-  const activeGroup: Group = groups[Math.min(Math.max(activeIdx, 0), groups.length - 1)]
-  const featured = useMemo(() => activeGroup.items.find(i => i.featured) ?? null, [activeGroup])
+  const groupsByTitle = useMemo(() => {
+    const m = new Map<string, Group>()
+    for (const g of groups) m.set(g.title, g)
+    return m
+  }, [])
 
-  const filtered = useMemo(() => {
-    const q = normalize(query)
+  const activeGroup = groupsByTitle.get(activeTab) ?? groups[0]
+  const featured = useMemo(() => pickFeatured(activeGroup), [activeGroup])
+
+  const filteredItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
     if (!q) return activeGroup.items
-    return activeGroup.items.filter(c => {
-      const creators = normalizeHandles(c.creators).join(" ")
-      const hay = [c.name, c.network, creators, c.miniapp ?? "", c.opensea ?? ""].join(" ").toLowerCase()
+
+    return activeGroup.items.filter((c: Collection) => {
+      const creators = c.creators.join(" ")
+      const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
       return hay.includes(q)
     })
   }, [activeGroup, query])
 
+  async function onOpenPrimary(c: Collection): Promise<void> {
+    const url = collectionPrimaryUrl(c, activeGroup.title)
+    if (!url) return
+    await openUrl(url)
+  }
+
+  async function onOpenSecondary(c: Collection): Promise<void> {
+    const url = collectionSecondaryUrl(c, activeGroup.title)
+    if (!url) return
+    await openUrl(url)
+  }
+
+  async function onHandleClick(handle: string): Promise<void> {
+    await viewProfileByHandle(handle, fidCacheRef.current)
+  }
+
   return (
     <div
       style={{
+        width: "100vw",
         minHeight: "100vh",
-        background:
-          "radial-gradient(1200px 600px at 20% 0%, rgba(255,255,255,0.08), transparent 55%), #0b0d12",
+        overflowX: "hidden",
+        background: "#0b0f14",
         color: "rgba(255,255,255,0.92)",
-        padding: 18,
-        boxSizing: "border-box"
+        display: "flex",
+        justifyContent: "center",
+        padding: 14
       }}
     >
-      <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 0.4 }}>NFT Season</div>
-            <div style={{ marginTop: 8, opacity: 0.78, fontSize: 14, lineHeight: 1.35 }}>
-              IT IS NFT SEASON ON FC! @opensea is either late to the party or completely MIA but we are minting the
-              collections that define this cycle.
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 720,
+          border: "1px solid rgba(255,255,255,0.15)",
+          borderRadius: 18,
+          background: "rgba(255,255,255,0.03)",
+          boxShadow: "0 18px 55px rgba(0,0,0,0.55)",
+          overflow: "hidden"
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: 14, borderBottom: "1px solid rgba(255,255,255,0.10)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
+              <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>
+                Updated {formatIsoDate(activeGroup.lastUpdated)}
+              </div>
             </div>
-            <div style={{ marginTop: 8, opacity: 0.70, fontSize: 13 }}>
-              What NFTs are we minting? What upcoming projects are we excited about? This miniapp is your one-stop-shop
-              for new and ongoing mints in the space.
-            </div>
-            <div style={{ marginTop: 8, opacity: 0.70, fontSize: 13 }}>
-              What are we missing? Tag @raspishake with your NFT mint miniapp. You are not minting via a miniapp on
-              Farcaster? We are not interested, Get in here!
+
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
+              <div style={{ fontWeight: 800 }}>miniapp created by @raspishake</div>
+              <div style={{ marginTop: 2 }}>
+                (Raspberry Shake, S.A.,{" "}
+                <button
+                  onClick={() => openUrl("https://raspberryshake.org")}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    margin: 0,
+                    color: "#8ab4ff",
+                    cursor: "pointer",
+                    fontWeight: 750
+                  }}
+                  title="Open raspberryshake.org"
+                >
+                  https://raspberryshake.org
+                </button>
+                )
+              </div>
             </div>
           </div>
 
-          <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-            <div style={{ opacity: 0.70, fontSize: 13 }}>{UPDATED_TEXT}</div>
-            <div style={{ marginTop: 8, opacity: 0.75, fontSize: 12 }}>
-              miniapp created by @raspishake (Raspberry Shake, S.A.,{" "}
-              <button
-                onClick={() => openUrl("https://raspberryshake.org")}
-                style={{
-                  appearance: "none",
-                  border: "none",
-                  background: "transparent",
-                  padding: 0,
-                  margin: 0,
-                  color: "rgba(255,255,255,0.92)",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                  textUnderlineOffset: 3
-                }}
-                title="Open raspberryshake.org"
-              >
-                https://raspberryshake.org
-              </button>
-              )
-            </div>
+          {/* Search */}
+          <div style={{ marginTop: 12 }}>
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={`Search ${activeGroup.title}...`}
+              style={{
+                width: "100%",
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.14)",
+                background: "rgba(0,0,0,0.30)",
+                color: "rgba(255,255,255,0.92)",
+                padding: "10px 12px",
+                outline: "none"
+              }}
+            />
           </div>
-        </div>
 
-        <div
-          style={{
-            marginTop: 14,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-            padding: 12,
-            borderRadius: 16,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.04)"
-          }}
-        >
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {groups.map((g, idx) => {
-              const active = idx === activeIdx
+          {/* Tabs */}
+          <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {groups.map((g: Group) => {
+              const active = g.title === activeTab
               return (
                 <button
                   key={g.title}
-                  onClick={() => setActiveIdx(idx)}
+                  onClick={() => setActiveTab(g.title)}
                   style={{
-                    appearance: "none",
-                    border: "1px solid rgba(255,255,255,0.16)",
-                    background: active ? "rgba(255,255,255,0.12)" : "transparent",
-                    color: "rgba(255,255,255,0.92)",
+                    padding: "8px 10px",
                     borderRadius: 999,
-                    padding: "8px 12px",
-                    fontSize: 13,
-                    fontWeight: 900,
-                    cursor: "pointer"
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    background: active ? "rgba(138,180,255,0.18)" : "rgba(255,255,255,0.06)",
+                    color: active ? "#eaf1ff" : "rgba(255,255,255,0.80)",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    fontSize: 12.5
                   }}
                 >
                   {g.title}
@@ -398,73 +281,306 @@ export default function App() {
               )
             })}
           </div>
-
-          <div style={{ flex: 1, minWidth: 0 }} />
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <div style={{ opacity: 0.70, fontSize: 13, fontWeight: 900 }}>Search</div>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="collection, creator, network..."
-              style={{
-                width: "min(520px, 100%)",
-                maxWidth: "100%",
-                minWidth: 0,
-                boxSizing: "border-box",
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.16)",
-                background: "rgba(0,0,0,0.25)",
-                color: "rgba(255,255,255,0.92)",
-                padding: "10px 12px",
-                outline: "none",
-                fontSize: 14
-              }}
-            />
-            {query ? (
-              <button
-                onClick={() => setQuery("")}
-                style={{
-                  appearance: "none",
-                  border: "1px solid rgba(255,255,255,0.16)",
-                  background: "transparent",
-                  color: "rgba(255,255,255,0.80)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  fontSize: 13,
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap"
-                }}
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
         </div>
 
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 900 }}>{activeGroup.title}</div>
-          <div style={{ marginTop: 6, opacity: 0.72, fontSize: 14 }}>{activeGroup.description}</div>
-        </div>
-
-        {featured ? (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-              <FeaturedBadge />
-              <div style={{ opacity: 0.75, fontWeight: 900, fontSize: 13 }}>highlighted in {activeGroup.title}</div>
+        {/* Body */}
+        <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>
+            <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.92)" }}>{activeGroup.title}</div>
+            <div style={{ marginTop: 3 }}>
+              <RichText text={activeGroup.description} onHandleClick={onHandleClick} />
             </div>
-            <Tile c={featured} groupTitle={activeGroup.title} featured={true} />
           </div>
-        ) : null}
 
-        <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
-          {filtered.map(c => (
-            <Tile key={`${activeGroup.title}:${c.name}`} c={c} groupTitle={activeGroup.title} featured={false} />
-          ))}
+          {/* Featured */}
+          {featured ? (
+            <div
+              style={{
+                border: "1px solid rgba(255,255,255,0.25)",
+                background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+                borderRadius: 16,
+                padding: 14,
+                boxShadow: "0 0 0 1px rgba(138,180,255,0.25), 0 12px 30px rgba(0,0,0,0.45)"
+              }}
+            >
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <img
+                  src={featured.thumbnail}
+                  alt={`${featured.name} thumbnail`}
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 14,
+                    objectFit: "cover",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    flex: "0 0 auto"
+                  }}
+                />
+
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 0.2 }}>{featured.name}</div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: "3px 8px",
+                        borderRadius: 999,
+                        background: "rgba(138,180,255,0.18)",
+                        border: "1px solid rgba(138,180,255,0.35)",
+                        color: "#cfe0ff",
+                        fontWeight: 900
+                      }}
+                    >
+                      FEATURED
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: "3px 8px",
+                        borderRadius: 999,
+                        background: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        color: "rgba(255,255,255,0.75)",
+                        fontWeight: 800
+                      }}
+                    >
+                      {featured.network}
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: 6, fontSize: 12.5, color: "rgba(255,255,255,0.78)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.6)" }}>Creators: </span>
+                    {featured.creators.length ? (
+                      featured.creators.map((cr: string, i: number) => (
+                        <React.Fragment key={`${featured.name}-cr-${i}`}>
+                          {i > 0 ? ", " : ""}
+                          <button
+                            onClick={() => onHandleClick(cr)}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              padding: 0,
+                              margin: 0,
+                              color: "#8ab4ff",
+                              cursor: "pointer",
+                              fontWeight: 800
+                            }}
+                          >
+                            {cr}
+                          </button>
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      <span>N/A</span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ marginLeft: "auto", flex: "0 0 auto", display: "flex", gap: 8 }}>
+                  {collectionPrimaryUrl(featured, activeGroup.title) ? (
+                    <button
+                      onClick={() => onOpenPrimary(featured)}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 12,
+                        border: "1px solid rgba(255,255,255,0.18)",
+                        background: "rgba(138,180,255,0.16)",
+                        color: "#eaf1ff",
+                        fontWeight: 900,
+                        cursor: "pointer"
+                      }}
+                    >
+                      {primaryActionLabel(activeGroup.title)}
+                    </button>
+                  ) : null}
+
+                  {collectionSecondaryUrl(featured, activeGroup.title) ? (
+                    <button
+                      onClick={() => onOpenSecondary(featured)}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 12,
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        background: "rgba(255,255,255,0.06)",
+                        color: "rgba(255,255,255,0.86)",
+                        fontWeight: 800,
+                        cursor: "pointer"
+                      }}
+                    >
+                      OpenSea
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* List */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {filteredItems.map((c: Collection) => {
+              const primaryUrl = collectionPrimaryUrl(c, activeGroup.title)
+              const secondaryUrl = collectionSecondaryUrl(c, activeGroup.title)
+
+              return (
+                <div
+                  key={`${activeGroup.title}-${c.name}`}
+                  style={{
+                    borderRadius: 16,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.04)",
+                    padding: 12,
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center"
+                  }}
+                >
+                  <img
+                    src={c.thumbnail}
+                    alt={`${c.name} thumbnail`}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      objectFit: "cover",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      flex: "0 0 auto"
+                    }}
+                  />
+
+                  <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ fontSize: 15.5, fontWeight: 900, letterSpacing: 0.1 }}>{c.name}</div>
+                      {c.featured ? (
+                        <span
+                          style={{
+                            fontSize: 10.5,
+                            padding: "3px 7px",
+                            borderRadius: 999,
+                            background: "rgba(138,180,255,0.15)",
+                            border: "1px solid rgba(138,180,255,0.30)",
+                            color: "#cfe0ff",
+                            fontWeight: 900
+                          }}
+                        >
+                          FEATURED
+                        </span>
+                      ) : null}
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          padding: "3px 7px",
+                          borderRadius: 999,
+                          background: "rgba(255,255,255,0.07)",
+                          border: "1px solid rgba(255,255,255,0.10)",
+                          color: "rgba(255,255,255,0.70)",
+                          fontWeight: 800
+                        }}
+                      >
+                        {c.network}
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: 6, fontSize: 12.25, color: "rgba(255,255,255,0.78)" }}>
+                      <span style={{ color: "rgba(255,255,255,0.55)" }}>Creators: </span>
+                      {c.creators.length ? (
+                        c.creators.map((cr: string, i: number) => (
+                          <React.Fragment key={`${c.name}-creator-${i}`}>
+                            {i > 0 ? ", " : ""}
+                            <button
+                              onClick={() => onHandleClick(cr)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                padding: 0,
+                                margin: 0,
+                                color: "#8ab4ff",
+                                cursor: "pointer",
+                                fontWeight: 800
+                              }}
+                            >
+                              {cr}
+                            </button>
+                          </React.Fragment>
+                        ))
+                      ) : (
+                        <span>N/A</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flex: "0 0 auto" }}>
+                    {primaryUrl ? (
+                      <button
+                        onClick={() => onOpenPrimary(c)}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          border: "1px solid rgba(255,255,255,0.16)",
+                          background: c.featured ? "rgba(138,180,255,0.18)" : "rgba(255,255,255,0.06)",
+                          color: "rgba(255,255,255,0.92)",
+                          fontWeight: 900,
+                          cursor: "pointer",
+                          minWidth: 92
+                        }}
+                      >
+                        {primaryActionLabel(activeGroup.title)}
+                      </button>
+                    ) : null}
+
+                    {secondaryUrl ? (
+                      <button
+                        onClick={() => onOpenSecondary(c)}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          background: "rgba(255,255,255,0.04)",
+                          color: "rgba(255,255,255,0.84)",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        OpenSea
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
-        <div style={{ height: 18 }} />
+        {/* Footer messaging */}
+        <div
+          style={{
+            padding: 14,
+            borderTop: "1px solid rgba(255,255,255,0.10)",
+            color: "rgba(255,255,255,0.72)",
+            fontSize: 12.75,
+            lineHeight: 1.35
+          }}
+        >
+          <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>IT IS NFT SEASON ON FC!</div>
+          <div style={{ marginTop: 6 }}>
+            <RichText
+              text="@opensea is either late to the party or completely MIA but we are minting the collections that define this cycle."
+              onHandleClick={onHandleClick}
+            />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            What NFTs are we minting? What upcoming projects are we excited about? This miniapp is your one-stop-shop for
+            new and ongoing mints in the space.
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <RichText
+              text="What are we missing? Tag @raspishake with your NFT mint miniapp. You are not minting via a miniapp on Farcaster? We are not interested, get in here!"
+              onHandleClick={onHandleClick}
+            />
+          </div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
+            {readyCalled ? "" : "Loading..."}
+          </div>
+        </div>
       </div>
     </div>
   )
