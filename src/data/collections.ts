@@ -196,7 +196,7 @@ export const groups: Group[] = [
       },
       {
         name: "Sheeplet",
-        creators: [],
+        creators: ["@basewtf"],
         network: "Arbitrum",
         featured: false,
         thumbnail: TMP_THUMB
@@ -235,7 +235,7 @@ export const groups: Group[] = [
       },
       {
         name: "CryptoaDickButts",
-        creators: [],
+        creators: ["@beatsbyoptic"],
         opensea: "https://opensea.io/collection/cryptoadickbuttz",
         network: "Base",
         featured: false,
@@ -251,7 +251,7 @@ export const groups: Group[] = [
       },
       {
         name: "x402 Toadz",
-        creators: ["@maxbuild.eth"],
+        creators: ["@maxbuidl.eth"],
         opensea: "https://opensea.io/collection/x402_toadz-club-base",
         network: "Base",
         featured: false,
