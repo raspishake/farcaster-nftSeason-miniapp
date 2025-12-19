@@ -18,43 +18,46 @@ function toMiniAppOpenUrl(raw: string): string {
   const s = raw.trim()
   if (!s) return s
 
-  // openMiniApp wants a url-like string, examples omit protocol.
-  // Normalize to "host/path?query" without protocol and without trailing fragments.
-  const withoutProtocol = s.replace(/^https?:\/\//i, "")
-  const withoutHash = withoutProtocol.split("#")[0] ?? withoutProtocol
+  // Remove hash fragments (they can break deep links in some shells)
+  const noHash = (s.split("#")[0] ?? s).trim()
 
-  // collapse accidental double slashes after host
-  const parts = withoutHash.split("/")
-  if (parts.length <= 1) return withoutHash
+  // Ensure https://
+  const withProtocol = /^https?:\/\//i.test(noHash) ? noHash : `https://${noHash}`
 
-  const host = parts[0] ?? ""
-  const rest = parts.slice(1).filter(Boolean).join("/")
-  return rest ? `${host}/${rest}` : host
+  // Collapse accidental double slashes in the path (keep "https://")
+  try {
+    const u = new URL(withProtocol)
+    u.pathname = u.pathname.replace(/\/{2,}/g, "/")
+    return u.toString()
+  } catch {
+    // If URL parsing fails, return the best effort
+    return withProtocol.replace(/([^:]\/)\/+/g, "$1")
+  }
 }
 
 async function safeOpenUrl(url: string): Promise<void> {
+  const finalUrl = toMiniAppOpenUrl(url)
+  if (!finalUrl) return
+
   try {
-    await sdk.actions.openUrl(url)
+    await sdk.actions.openUrl(finalUrl)
     return
   } catch {
-    window.location.href = url
+    window.location.href = finalUrl
   }
 }
 
 async function openMiniAppOrUrl(url: string): Promise<void> {
-  const trimmed = url.trim()
-  if (!trimmed) return
-
-  const openMiniAppUrl = toMiniAppOpenUrl(trimmed)
+  const openMiniAppUrl = toMiniAppOpenUrl(url)
+  if (!openMiniAppUrl) return
 
   try {
-    // This is the “seamless opening from within a miniapp” path.
+    // Prefer opening inside Farcaster miniapp shell (works for farcaster.xyz/miniapps/* and valid embed URLs)
     await sdk.actions.openMiniApp({ url: openMiniAppUrl })
     return
   } catch {
-    // Fallback for environments where openMiniApp fails for non-miniapp URLs.
-    const finalUrl = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
-    await safeOpenUrl(finalUrl)
+    // Fallback to normal navigation
+    await safeOpenUrl(openMiniAppUrl)
   }
 }
 
@@ -140,6 +143,7 @@ function RichText({
                 pointerEvents: "auto"
               }}
               title={`Open @${normalizeHandle(stripped)} on Farcaster`}
+              type="button"
             >
               {p}
             </button>
@@ -221,26 +225,23 @@ export default function App() {
     return list
   }, [activeGroup])
 
-  // Featured should ONLY appear at top, never in list/ sorting alphabetical by name.
-const filteredItems = useMemo(() => {
-  const q = query.trim().toLowerCase()
+  // Featured should ONLY appear at top, never in list, sorting alphabetical by name.
+  const filteredItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
 
-  const base = resolvedItems
-    .filter((c: Collection) => c.id !== activeGroup.featuredId)
-    .filter((c: Collection) => {
-      if (!q) return true
-      const creators = c.creators.join(" ")
-      const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
-      return hay.includes(q)
-    })
+    const base = resolvedItems
+      .filter((c: Collection) => c.id !== activeGroup.featuredId)
+      .filter((c: Collection) => {
+        if (!q) return true
+        const creators = c.creators.join(" ")
+        const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
+        return hay.includes(q)
+      })
 
-  // Sort alphabetically (case-insensitive)
-  base.sort((a: Collection, b: Collection) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-  )
+    base.sort((a: Collection, b: Collection) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
 
-  return base
-}, [resolvedItems, query, activeGroup.featuredId])
+    return base
+  }, [resolvedItems, query, activeGroup.featuredId])
 
   async function onOpenPrimary(c: Collection): Promise<void> {
     const url = collectionPrimaryUrl(c, activeGroup.title)
@@ -297,9 +298,7 @@ const filteredItems = useMemo(() => {
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
             <div>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
-              <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>
-                Updated Dec 19, 2037
-              </div>
+              <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>Updated Dec 19, 2037</div>
             </div>
 
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
@@ -318,6 +317,7 @@ const filteredItems = useMemo(() => {
                     fontWeight: 750
                   }}
                   title="Open raspberryshake.org"
+                  type="button"
                 >
                   https://raspberryshake.org
                 </button>
@@ -364,6 +364,7 @@ const filteredItems = useMemo(() => {
                     fontWeight: 800,
                     fontSize: 12.5
                   }}
+                  type="button"
                 >
                   {g.title}
                 </button>
@@ -455,6 +456,7 @@ const filteredItems = useMemo(() => {
                               cursor: "pointer",
                               fontWeight: 800
                             }}
+                            type="button"
                           >
                             {cr}
                           </button>
@@ -479,8 +481,9 @@ const filteredItems = useMemo(() => {
                         fontWeight: 900,
                         cursor: "pointer"
                       }}
+                      type="button"
                     >
-			{primaryActionLabel(activeGroup.title, collectionPrimaryUrl(featured, activeGroup.title))}
+                      {primaryActionLabel(activeGroup.title, collectionPrimaryUrl(featured, activeGroup.title))}
                     </button>
                   ) : null}
 
@@ -496,6 +499,7 @@ const filteredItems = useMemo(() => {
                         fontWeight: 800,
                         cursor: "pointer"
                       }}
+                      type="button"
                     >
                       OpenSea
                     </button>
@@ -572,6 +576,7 @@ const filteredItems = useMemo(() => {
                                 cursor: "pointer",
                                 fontWeight: 800
                               }}
+                              type="button"
                             >
                               {cr}
                             </button>
@@ -597,8 +602,9 @@ const filteredItems = useMemo(() => {
                           cursor: "pointer",
                           minWidth: 92
                         }}
+                        type="button"
                       >
-			{primaryActionLabel(activeGroup.title, primaryUrl)}
+                        {primaryActionLabel(activeGroup.title, primaryUrl)}
                       </button>
                     ) : null}
 
@@ -614,6 +620,7 @@ const filteredItems = useMemo(() => {
                           fontWeight: 800,
                           cursor: "pointer"
                         }}
+                        type="button"
                       >
                         OpenSea
                       </button>
@@ -652,9 +659,7 @@ const filteredItems = useMemo(() => {
               onHandleClick={onHandleClick}
             />
           </div>
-          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
-            {readyCalled ? "" : "Loading..."}
-          </div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>{readyCalled ? "" : "Loading..."}</div>
         </div>
       </div>
     </div>
