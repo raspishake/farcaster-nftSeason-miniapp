@@ -13,37 +13,66 @@ function isProbablyHandleToken(token: string): boolean {
   return /^@[a-z0-9][a-z0-9\-_.]{0,63}$/i.test(token)
 }
 
-async function openUrl(url: string): Promise<void> {
-  await sdk.actions.openUrl(url)
+async function safeOpenUrl(url: string): Promise<void> {
+  try {
+    await sdk.actions.openUrl(url)
+    return
+  } catch {
+    // fallback for environments where sdk.openUrl fails silently
+    window.location.href = url
+  }
 }
 
 async function resolveFidByUsername(username: string): Promise<number | null> {
   const u = normalizeHandle(username)
   const endpoint = `https://api.warpcast.com/v2/user-by-username?username=${encodeURIComponent(u)}`
-  const res = await fetch(endpoint, { method: "GET" })
-  if (!res.ok) return null
-  const data = (await res.json()) as any
-  const fid = data?.result?.user?.fid ?? data?.user?.fid ?? data?.result?.fid ?? null
-  return typeof fid === "number" ? fid : null
+
+  try {
+    const res = await fetch(endpoint, { method: "GET" })
+    if (!res.ok) return null
+    const data = (await res.json()) as any
+    const fid = data?.result?.user?.fid ?? data?.user?.fid ?? data?.result?.fid ?? null
+    return typeof fid === "number" ? fid : null
+  } catch {
+    // CORS/network policy in Farcaster webview can throw
+    return null
+  }
 }
 
 async function viewProfileByHandle(handle: string, fidCache: Map<string, number>): Promise<void> {
   const h = normalizeHandle(handle).toLowerCase()
 
-  const cached = fidCache.get(h)
-  if (typeof cached === "number") {
-    await sdk.actions.viewProfile({ fid: cached })
-    return
-  }
+  // If the SDK profile view fails, always fall back to warpcast URL
+  const fallback = async () => safeOpenUrl(`https://warpcast.com/${encodeURIComponent(h)}`)
 
-  const fid = await resolveFidByUsername(h)
-  if (typeof fid === "number") {
-    fidCache.set(h, fid)
-    await sdk.actions.viewProfile({ fid })
-    return
-  }
+  try {
+    const cached = fidCache.get(h)
+    if (typeof cached === "number") {
+      try {
+        await sdk.actions.viewProfile({ fid: cached })
+        return
+      } catch {
+        await fallback()
+        return
+      }
+    }
 
-  await openUrl(`https://warpcast.com/${encodeURIComponent(h)}`)
+    const fid = await resolveFidByUsername(h)
+    if (typeof fid === "number") {
+      fidCache.set(h, fid)
+      try {
+        await sdk.actions.viewProfile({ fid })
+        return
+      } catch {
+        await fallback()
+        return
+      }
+    }
+
+    await fallback()
+  } catch {
+    await fallback()
+  }
 }
 
 function RichText({
@@ -75,7 +104,8 @@ function RichText({
                 margin: 0,
                 color: linkColor,
                 cursor: "pointer",
-                fontWeight: 700
+                fontWeight: 800,
+                pointerEvents: "auto"
               }}
               title={`Open @${normalizeHandle(stripped)} on Farcaster`}
             >
@@ -91,6 +121,7 @@ function RichText({
 }
 
 function primaryActionLabel(groupTitle: string): string {
+  if (groupTitle === "You missed the Boat") return "OpenSea"
   return groupTitle === "Be Early" ? "Allow List" : "Mint"
 }
 
@@ -146,7 +177,7 @@ export default function App() {
   const activeGroup = groupsByTitle.get(activeTab) ?? groups[0]
   const featured = useMemo(() => pickFeatured(activeGroup), [activeGroup])
 
-  // IMPORTANT: featured should appear ONLY at the top, not in the list.
+  // Featured should ONLY appear at top, never in list.
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase()
     const base = activeGroup.items.filter((c: Collection) => !c.featured)
@@ -163,23 +194,24 @@ export default function App() {
   async function onOpenPrimary(c: Collection): Promise<void> {
     const url = collectionPrimaryUrl(c, activeGroup.title)
     if (!url) return
-    await openUrl(url)
+    await safeOpenUrl(url)
   }
 
   async function onOpenSecondary(c: Collection): Promise<void> {
     const url = collectionSecondaryUrl(c, activeGroup.title)
     if (!url) return
-    await openUrl(url)
+    await safeOpenUrl(url)
   }
 
-  async function onHandleClick(handle: string): Promise<void> {
-    await viewProfileByHandle(handle, fidCacheRef.current)
+  function onHandleClick(handle: string): void {
+    // fire-and-forget, but not silently failing
+    void viewProfileByHandle(handle, fidCacheRef.current)
   }
 
   return (
     <div
       style={{
-        width: "100vw",
+        width: "100%",
         minHeight: "100vh",
         overflowX: "hidden",
         background: "#0b0f14",
@@ -216,7 +248,7 @@ export default function App() {
             <div>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
               <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>
-                Updated December 18, 2037
+                Updated Dec 18, 2037
               </div>
             </div>
 
@@ -225,7 +257,7 @@ export default function App() {
               <div style={{ marginTop: 2 }}>
                 (Raspberry Shake, S.A.,{" "}
                 <button
-                  onClick={() => openUrl("https://raspberryshake.org")}
+                  onClick={() => void safeOpenUrl("https://raspberryshake.org")}
                   style={{
                     background: "transparent",
                     border: "none",
@@ -252,6 +284,8 @@ export default function App() {
               placeholder={`Search ${activeGroup.title}...`}
               style={{
                 width: "100%",
+                maxWidth: "100%",
+                boxSizing: "border-box",
                 borderRadius: 12,
                 border: "1px solid rgba(255,255,255,0.14)",
                 background: "rgba(0,0,0,0.30)",
@@ -385,7 +419,7 @@ export default function App() {
                 <div style={{ marginLeft: "auto", flex: "0 0 auto", display: "flex", gap: 8 }}>
                   {collectionPrimaryUrl(featured, activeGroup.title) ? (
                     <button
-                      onClick={() => onOpenPrimary(featured)}
+                      onClick={() => void onOpenPrimary(featured)}
                       style={{
                         padding: "10px 12px",
                         borderRadius: 12,
@@ -402,7 +436,7 @@ export default function App() {
 
                   {collectionSecondaryUrl(featured, activeGroup.title) ? (
                     <button
-                      onClick={() => onOpenSecondary(featured)}
+                      onClick={() => void onOpenSecondary(featured)}
                       style={{
                         padding: "10px 12px",
                         borderRadius: 12,
@@ -502,7 +536,7 @@ export default function App() {
                   <div style={{ display: "flex", gap: 8, flex: "0 0 auto" }}>
                     {primaryUrl ? (
                       <button
-                        onClick={() => onOpenPrimary(c)}
+                        onClick={() => void onOpenPrimary(c)}
                         style={{
                           padding: "10px 12px",
                           borderRadius: 12,
@@ -520,7 +554,7 @@ export default function App() {
 
                     {secondaryUrl ? (
                       <button
-                        onClick={() => onOpenSecondary(c)}
+                        onClick={() => void onOpenSecondary(c)}
                         style={{
                           padding: "10px 12px",
                           borderRadius: 12,
@@ -541,7 +575,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Footer messaging */}
+        {/* Footer */}
         <div
           style={{
             padding: 14,

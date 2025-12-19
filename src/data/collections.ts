@@ -24,7 +24,7 @@ const TMP_THUMB = "/thumbs/tmp.png"
 export const groups: Group[] = [
   {
     title: "The Alpha",
-    description: "No waitlist (yet)",
+    description: "No allowlist (yet)- mints incoming. Check back in again for updates",
     lastUpdated: "2025-09-18",
     items: [
       {

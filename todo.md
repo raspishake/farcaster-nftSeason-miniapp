@@ -1,0 +1,2 @@
+- how to submit an NFT project
+- Make NEW! additions stand out
