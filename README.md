@@ -1,7 +1,3 @@
-Here is a **clean, corrected README.md** tailored to *NFT Season*, with exactly what you asked added and nothing fluffy.
-
-Replace your entire `README.md` with this:
-
 ````md
 # NFT Season
 
@@ -9,11 +5,16 @@ A Farcaster Mini App that curates new, live, and past NFT mints across the Farca
 
 Built with Vite and the official `@farcaster/create-mini-app` scaffold.
 
+Dark-mode first.  
+No backend.  
+No paid APIs.  
+All content is data-driven.
+
 ---
 
 ## Development
 
-### Install
+### Install dependencies
 ```bash
 npm install
 ````
@@ -66,7 +67,7 @@ This will:
 
 ## Post-Deploy (Required)
 
-After **every production deploy**, you must refresh the Mini App manifest in Farcaster:
+After **every production deploy**, you must refresh the Mini App manifest in Farcaster.
 
 1. Open:
 
@@ -76,7 +77,7 @@ https://farcaster.xyz/~/developers/mini-apps/manifest?domain=nft-season.vercel.a
 
 2. Click **Refresh**
 
-This step is required for Farcaster to re-read:
+This is required for Farcaster to re-read:
 
 * `/.well-known/farcaster.json`
 * account association
@@ -90,7 +91,7 @@ This step is required for Farcaster to re-read:
 The Mini App manifest lives at:
 
 ```
-/public/.well-known/farcaster.json
+public/.well-known/farcaster.json
 ```
 
 It is served statically by Vite from the `public` directory.
@@ -101,12 +102,6 @@ Common edits:
 * app name / description
 * developer metadata
 * tags
-
-Example location:
-
-```text
-public/.well-known/farcaster.json
-```
 
 ---
 
@@ -120,6 +115,114 @@ Important files:
 public/thumbs/miniapp.png   # Mini App icon & splash
 public/thumbs/tmp.png       # Temporary collection thumbnails
 ```
+
+---
+
+## Updating NFT Data (Most Important Section)
+
+All NFT data lives in **one file**:
+
+```
+src/data/collections.ts
+```
+
+This file is intentionally structured so:
+
+* NFT collections are defined **once**
+* Collections can appear in **multiple groups**
+* No data is duplicated
+
+---
+
+## How to Add a New NFT Collection
+
+### Step 1: Add the collection definition
+
+Find the `collectionsById` object in:
+
+```
+src/data/collections.ts
+```
+
+Add a new entry **once**:
+
+```ts
+"example-nft": {
+  id: "example-nft",
+  name: "Example NFT",
+  creators: ["@creatorhandle"],
+  miniapp: "https://farcaster.xyz/miniapps/XXXXX/example",
+  opensea: "https://opensea.io/collection/example",
+  network: "Base", // Base | Arbitrum | Ethereum
+  thumbnail: "/thumbs/tmp.png"
+}
+```
+
+Notes:
+
+* `id` must be **unique** and URL-safe
+* `miniapp` is optional
+* `opensea` is optional
+* If only OpenSea exists, the button will correctly say **OpenSea**
+* Creator handles must include `@`
+
+---
+
+### Step 2: Add the collection to one or more groups
+
+Scroll down to the `groups` array in the same file.
+
+Each group references collections by **ID only**.
+
+Example:
+
+```ts
+{
+  title: "We are Live",
+  description: "Time to click buttons. The following limited edition mints are Live.",
+  lastUpdated: "Dec 18, 2037",
+  featuredId: "example-nft", // optional
+  itemIds: [
+    "example-nft",
+    "another-nft"
+  ]
+}
+```
+
+You can:
+
+* Add the same collection ID to **multiple groups**
+* Feature it in **only one group** by setting `featuredId`
+* Omit `featuredId` entirely if nothing is featured
+
+---
+
+### Featured Rules (Important)
+
+* `featuredId` is **group-specific**
+* A collection can appear in many groups
+* A collection should be featured in **at most one group**
+* Featured collections appear at the top and are **not duplicated** in the list
+
+---
+
+## Button Behavior (Automatic)
+
+Buttons are determined automatically:
+
+* If primary link is OpenSea → button says **OpenSea**
+* If group is **Be Early** → button says **Allow List**
+* Otherwise → **Mint**
+
+No manual labeling needed.
+
+Miniapp links attempt to open via:
+
+```ts
+sdk.actions.openMiniApp()
+```
+
+with a safe fallback to browser navigation.
 
 ---
 
@@ -148,30 +251,17 @@ meta tag to `index.html`:
 
 ---
 
-## Updating NFT Lists
+## Design Notes
 
-All NFT groups and collections live in:
-
-```
-src/data/collections.ts
-```
-
-To update content:
-
-* Edit text only
-* No code changes required
-* Redeploy after changes
+* Dark-mode only
+* No horizontal scrolling by design
+* Search is scoped to active group
+* Creator handles open Farcaster profiles in-app when possible
 
 ---
-
-## Notes
-
-* Dark-mode first
-* No backend
-* No paid APIs
-* Designed to be edited via a single data file
 
 Mini App created by **@raspishake**
 Raspberry Shake, S.A.
 [https://raspberryshake.org](https://raspberryshake.org)
 
+```
