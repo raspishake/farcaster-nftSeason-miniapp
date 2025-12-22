@@ -10,6 +10,7 @@ export type Collection = {
   opensea?: string
   network: Network
   thumbnail: string
+  highlight?: boolean
 }
 
 export type Group = {
@@ -34,7 +35,7 @@ export const collectionsById: Record<string, Collection> = {
     thumbnail: TMP_THUMB
   },
 
-  dickpunks: {
+ dickpunks: {
     id: "dickpunks",
     name: "DickPunks",
     creators: ["@madyak"],
@@ -357,6 +358,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@mevmonk"],
     miniapp: "https://basedbuilds.xyz/share?token=3&tx=0x0c33ab7d327ee94e28b1714a174fe097cdd251ee222d13799da23e559636c1b6",
     network: "Base",
+    highlight: true,
     thumbnail: TMP_THUMB
   },
 
@@ -366,6 +368,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@chriscocreated"],
     miniapp: "https://immutagen.ai/mint/d964d9a2-6707-4b3e-98a5-c505ae0d04d1?generationId=978c332b-aa9d-42c0-b8d0-7c044ca023a9",
     network: "Base",
+    highlight: true,
     thumbnail: TMP_THUMB
   },
 
@@ -393,6 +396,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@alec.eth"],
     miniapp: "https://warplet-mashup.vercel.app/mashup/1766299224302-doo0vrdt3?participants=sayangel%2Clevertz&image=https%3A%2F%2Fcoral-sophisticated-albatross-902.mypinata.cloud%2Fipfs%2FQmNWvYmsSZMXrqt2iz36v7sWbKatNzzhZm3rgzSGqTU5E2",
     network: "Base",
+    highlight: true,
     thumbnail: TMP_THUMB
   }
 }

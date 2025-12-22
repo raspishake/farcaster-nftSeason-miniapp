@@ -1,5 +1,3 @@
-// src/components/CollectionRow.tsx
-import React from "react"
 import type { Collection } from "../data/collections"
 
 export function CollectionRow({
@@ -19,7 +17,12 @@ export function CollectionRow({
   onOpenSecondary: (c: Collection) => void
   onHandleClick: (handle: string) => void
 }) {
-  const c = collection
+  const highlightStyle = collection.highlight
+    ? {
+        boxShadow: "0 0 0 1px rgba(138,180,255,0.35)",
+        animation: "featuredPulseGlow 2.4s ease-in-out infinite"
+      }
+    : {}
 
   return (
     <div
@@ -30,84 +33,80 @@ export function CollectionRow({
         padding: 12,
         display: "flex",
         gap: 12,
-        alignItems: "center"
+        alignItems: "center",
+        ...highlightStyle
       }}
     >
       <img
-        src={c.thumbnail}
-        alt={`${c.name} thumbnail`}
+        src={collection.thumbnail}
+        alt={collection.name}
         style={{
-          width: 44,
-          height: 44,
+          width: 48,
+          height: 48,
           borderRadius: 12,
-          objectFit: "cover",
-          border: "1px solid rgba(255,255,255,0.12)",
-          flex: "0 0 auto"
+          objectFit: "cover"
         }}
       />
 
-      <div style={{ minWidth: 0, flex: "1 1 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 15.5, fontWeight: 900, letterSpacing: 0.1 }}>{c.name}</div>
-          <span
-            style={{
-              fontSize: 10.5,
-              padding: "3px 7px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.10)",
-              color: "rgba(255,255,255,0.70)",
-              fontWeight: 800
-            }}
-          >
-            {c.network}
-          </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontWeight: 900 }}>{collection.name}</div>
+
+          {collection.highlight ? (
+            <span
+              style={{
+                fontSize: 11,
+                padding: "3px 8px",
+                borderRadius: 999,
+                background: "rgba(138,180,255,0.14)",
+                border: "1px solid rgba(138,180,255,0.30)",
+                color: "#cfe0ff",
+                fontWeight: 900
+              }}
+            >
+              NEW
+            </span>
+          ) : null}
         </div>
 
-        <div style={{ marginTop: 6, fontSize: 12.25, color: "rgba(255,255,255,0.78)" }}>
-          <span style={{ color: "rgba(255,255,255,0.55)" }}>Creators: </span>
-          {c.creators.length ? (
-            c.creators.map((cr: string, i: number) => (
-              <React.Fragment key={`${c.id}-creator-${i}`}>
-                {i > 0 ? ", " : ""}
-                <button
-                  onClick={() => onHandleClick(cr)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
-                    margin: 0,
-                    color: "#8ab4ff",
-                    cursor: "pointer",
-                    fontWeight: 800
-                  }}
-                  type="button"
-                >
-                  {cr}
-                </button>
-              </React.Fragment>
-            ))
-          ) : (
-            <span>N/A</span>
-          )}
+        <div style={{ fontSize: 13, opacity: 0.9 }}>
+          {collection.creators.map((cr, i) => (
+            <span key={cr}>
+              <button
+                type="button"
+                onClick={() => onHandleClick(cr)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  margin: 0,
+                  color: "#8ab4ff",
+                  cursor: "pointer",
+                  fontWeight: 700
+                }}
+              >
+                {cr}
+              </button>
+              {i < collection.creators.length - 1 ? ", " : ""}
+            </span>
+          ))}
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, flex: "0 0 auto" }}>
+      <div style={{ display: "flex", gap: 8 }}>
         {primaryUrl ? (
           <button
-            onClick={() => onOpenPrimary(c)}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.16)",
-              background: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.92)",
-              fontWeight: 900,
-              cursor: "pointer",
-              minWidth: 92
-            }}
             type="button"
+            onClick={() => onOpenPrimary(collection)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.18)",
+              background: "rgba(255,255,255,0.08)",
+              color: "#fff",
+              fontWeight: 800,
+              cursor: "pointer"
+            }}
           >
             {primaryLabel}
           </button>
@@ -115,17 +114,17 @@ export function CollectionRow({
 
         {secondaryUrl ? (
           <button
-            onClick={() => onOpenSecondary(c)}
+            type="button"
+            onClick={() => onOpenSecondary(collection)}
             style={{
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.12)",
+              padding: "6px 12px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.18)",
               background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.84)",
-              fontWeight: 800,
+              color: "#cfd8ff",
+              fontWeight: 700,
               cursor: "pointer"
             }}
-            type="button"
           >
             OpenSea
           </button>
