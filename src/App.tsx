@@ -10,66 +10,69 @@ import { FeaturedCard } from "./components/FeaturedCard"
 import { CollectionRow } from "./components/CollectionRow"
 
 type TabKey = string
-type LinkKind = "miniapp" | "opensea"
-type ResolvedLink = { url: string | null; kind: LinkKind | null }
+type LinkSource = "miniapp" | "opensea"
 
-function pickPrimaryLink(c: Collection, groupTitle: string): ResolvedLink {
-  const miniappOk = Boolean(c.miniapp && c.miniapp.trim() && c.miniapp !== "N/A" && c.miniapp !== "TBA")
-  const openseaOk = Boolean(c.opensea && c.opensea.trim() && c.opensea !== "N/A")
-
-  if (groupTitle === "You missed the Boat") {
-    return openseaOk ? { url: c.opensea!, kind: "opensea" } : { url: null, kind: null }
-  }
-
-  if (miniappOk) return { url: c.miniapp!, kind: "miniapp" }
-  if (openseaOk) return { url: c.opensea!, kind: "opensea" }
-  return { url: null, kind: null }
+function normUrl(u?: string | null): string {
+  return (u ?? "").trim().replace(/\/+$/, "")
 }
 
-function pickSecondaryLink(c: Collection, groupTitle: string): ResolvedLink {
-  const miniappOk = Boolean(c.miniapp && c.miniapp.trim() && c.miniapp !== "N/A" && c.miniapp !== "TBA")
-  const openseaOk = Boolean(c.opensea && c.opensea.trim() && c.opensea !== "N/A")
-
-  if (groupTitle === "You missed the Boat") return { url: null, kind: null }
-  if (miniappOk && openseaOk) return { url: c.opensea!, kind: "opensea" }
-
-  return { url: null, kind: null }
-}
-
-function defaultPrimaryLabel(groupTitle: string, kind: LinkKind | null, url: string | null): string {
-  if (!url || !kind) return "Mint"
+function defaultPrimaryLabel(groupTitle: string, source: LinkSource): string {
+  if (source === "opensea") return "OpenSea"
   if (groupTitle === "Be Early") return "Allow List"
-  if (kind === "opensea") return "OpenSea"
   return "Mint"
 }
 
-function defaultSecondaryLabel(kind: LinkKind | null, url: string | null): string {
-  if (!url || !kind) return ""
-  if (kind === "opensea") return "OpenSea"
-  return "Open"
+function defaultSecondaryLabel(source: LinkSource): string {
+  return source === "opensea" ? "OpenSea" : "Open"
 }
 
-function primaryLabelForCollection(c: Collection, groupTitle: string, primary: ResolvedLink): string {
-  if (!primary.url || !primary.kind) return defaultPrimaryLabel(groupTitle, primary.kind, primary.url)
-
+function primaryLabelForCollection(c: Collection, groupTitle: string, source: LinkSource): string {
   const override =
-    primary.kind === "miniapp"
-      ? c.primaryActionLabelOverride?.miniapp
-      : c.primaryActionLabelOverride?.opensea
-
+    source === "miniapp" ? c.primaryActionLabelOverride?.miniapp : c.primaryActionLabelOverride?.opensea
   if (override && override.trim()) return override.trim()
-  return defaultPrimaryLabel(groupTitle, primary.kind, primary.url)
+  return defaultPrimaryLabel(groupTitle, source)
 }
 
-function secondaryLabelForCollection(c: Collection, secondary: ResolvedLink): string {
-  if (!secondary.url || !secondary.kind) return ""
+function secondaryLabelForCollection(c: Collection, source: LinkSource): string {
   const override =
-    secondary.kind === "miniapp"
-      ? c.secondaryActionLabelOverride?.miniapp
-      : c.secondaryActionLabelOverride?.opensea
-
+    source === "miniapp" ? c.secondaryActionLabelOverride?.miniapp : c.secondaryActionLabelOverride?.opensea
   if (override && override.trim()) return override.trim()
-  return defaultSecondaryLabel(secondary.kind, secondary.url)
+  return defaultSecondaryLabel(source)
+}
+
+function collectionPrimaryUrl(c: Collection, groupTitle: string): string | null {
+  if (groupTitle === "You missed the Boat") {
+    if (c.opensea && c.opensea.trim() && c.opensea !== "N/A") return c.opensea
+    return null
+  }
+
+  if (c.miniapp && c.miniapp.trim() && c.miniapp !== "N/A" && c.miniapp !== "TBA") return c.miniapp
+  if (c.opensea && c.opensea.trim() && c.opensea !== "N/A") return c.opensea
+  return null
+}
+
+function collectionSecondaryUrl(c: Collection, groupTitle: string): string | null {
+  if (groupTitle === "You missed the Boat") return null
+  if (c.miniapp && c.opensea && c.opensea !== "N/A") return c.opensea
+  return null
+}
+
+function primarySourceFor(c: Collection, primaryUrl: string | null): LinkSource {
+  const p = normUrl(primaryUrl)
+  if (!p) return "miniapp"
+  if (p && normUrl(c.miniapp) && p === normUrl(c.miniapp)) return "miniapp"
+  if (p && normUrl(c.opensea) && p === normUrl(c.opensea)) return "opensea"
+  // fallback
+  return "miniapp"
+}
+
+function secondarySourceFor(c: Collection, secondaryUrl: string | null): LinkSource {
+  const s = normUrl(secondaryUrl)
+  if (!s) return "opensea"
+  if (s && normUrl(c.opensea) && s === normUrl(c.opensea)) return "opensea"
+  if (s && normUrl(c.miniapp) && s === normUrl(c.miniapp)) return "miniapp"
+  // fallback, secondary in this app is intended to be the "opensea" field
+  return "opensea"
 }
 
 export default function App() {
@@ -124,7 +127,7 @@ export default function App() {
         return hay.includes(q)
       })
 
-    // ORDER: NEW first (excluding featured), then alphabetical by name.
+    // ORDER: featured first (handled separately), NEW second, then alphabetical
     base.sort((a: Collection, b: Collection) => {
       const aNew = Boolean(a.highlight)
       const bNew = Boolean(b.highlight)
@@ -136,20 +139,29 @@ export default function App() {
   }, [resolvedItems, query, activeGroup.featuredId])
 
   async function onOpenPrimary(c: Collection): Promise<void> {
-    const primary = pickPrimaryLink(c, activeGroup.title)
-    if (!primary.url) return
-    await openMiniAppOrUrl(sdk, primary.url)
+    const url = collectionPrimaryUrl(c, activeGroup.title)
+    if (!url) return
+    await openMiniAppOrUrl(sdk, url)
   }
 
   async function onOpenSecondary(c: Collection): Promise<void> {
-    const secondary = pickSecondaryLink(c, activeGroup.title)
-    if (!secondary.url) return
-    await openMiniAppOrUrl(sdk, secondary.url)
+    const url = collectionSecondaryUrl(c, activeGroup.title)
+    if (!url) return
+    await openMiniAppOrUrl(sdk, url)
   }
 
   function onHandleClick(handle: string): void {
     void viewProfileByHandle(sdk as any, handle, fidCacheRef.current)
   }
+
+  const featuredPrimaryUrl = featured ? collectionPrimaryUrl(featured, activeGroup.title) : null
+  const featuredSecondaryUrl = featured ? collectionSecondaryUrl(featured, activeGroup.title) : null
+  const featuredPrimarySource: LinkSource = featured ? primarySourceFor(featured, featuredPrimaryUrl) : "miniapp"
+  const featuredSecondarySource: LinkSource = featured ? secondarySourceFor(featured, featuredSecondaryUrl) : "opensea"
+
+  const featuredPrimaryLabel =
+    featured ? primaryLabelForCollection(featured, activeGroup.title, featuredPrimarySource) : ""
+  const featuredSecondaryLabel = featured ? secondaryLabelForCollection(featured, featuredSecondarySource) : ""
 
   return (
     <div
@@ -167,7 +179,7 @@ export default function App() {
       <style>
         {`
           @keyframes featuredPulseGlow {
-            0%   { box-shadow: 0 0 0 0 rgba(138,180,255,0.55); }
+            0%   { box-shadow: 0 0 0 0 rgba(138,180,255,0.65); }
             70%  { box-shadow: 0 0 0 10px rgba(138,180,255,0); }
             100% { box-shadow: 0 0 0 0 rgba(138,180,255,0); }
           }
@@ -268,42 +280,38 @@ export default function App() {
             </div>
           </div>
 
-          {featured ? (() => {
-            const primary = pickPrimaryLink(featured, activeGroup.title)
-            const secondary = pickSecondaryLink(featured, activeGroup.title)
-            const primaryLabel = primaryLabelForCollection(featured, activeGroup.title, primary)
-            const secondaryLabel = secondaryLabelForCollection(featured, secondary)
-
-            return (
-              <FeaturedCard
-                collection={featured}
-                primaryLabel={primaryLabel}
-                primaryUrl={primary.url}
-                secondaryLabel={secondaryLabel}
-                secondaryUrl={secondary.url}
-                onOpenPrimary={c => void onOpenPrimary(c)}
-                onOpenSecondary={c => void onOpenSecondary(c)}
-                onHandleClick={onHandleClick}
-              />
-            )
-          })() : null}
+          {featured ? (
+            <FeaturedCard
+              collection={featured}
+              primaryLabel={featuredPrimaryLabel}
+              primaryUrl={featuredPrimaryUrl}
+              secondaryLabel={featuredSecondaryLabel}
+              secondaryUrl={featuredSecondaryUrl}
+              onOpenPrimary={c => void onOpenPrimary(c)}
+              onOpenSecondary={c => void onOpenSecondary(c)}
+              onHandleClick={onHandleClick}
+            />
+          ) : null}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {filteredItems.map((c: Collection) => {
-              const primary = pickPrimaryLink(c, activeGroup.title)
-              const secondary = pickSecondaryLink(c, activeGroup.title)
+              const primaryUrl = collectionPrimaryUrl(c, activeGroup.title)
+              const secondaryUrl = collectionSecondaryUrl(c, activeGroup.title)
 
-              const primaryLabel = primaryLabelForCollection(c, activeGroup.title, primary)
-              const secondaryLabel = secondaryLabelForCollection(c, secondary)
+              const primarySource = primarySourceFor(c, primaryUrl)
+              const secondarySource = secondarySourceFor(c, secondaryUrl)
+
+              const primaryLabel = primaryLabelForCollection(c, activeGroup.title, primarySource)
+              const secondaryLabel = secondaryLabelForCollection(c, secondarySource)
 
               return (
                 <CollectionRow
                   key={`${activeGroup.title}-${c.id}`}
                   collection={c}
                   primaryLabel={primaryLabel}
-                  primaryUrl={primary.url}
+                  primaryUrl={primaryUrl}
                   secondaryLabel={secondaryLabel}
-                  secondaryUrl={secondary.url}
+                  secondaryUrl={secondaryUrl}
                   onOpenPrimary={cc => void onOpenPrimary(cc)}
                   onOpenSecondary={cc => void onOpenSecondary(cc)}
                   onHandleClick={onHandleClick}
@@ -328,15 +336,13 @@ export default function App() {
             <RichText text="We are minting the NFT collections that define this cycle." onHandleClick={onHandleClick} />
           </div>
           <div style={{ marginTop: 8 }}>
-            What NFTs are we minting on Farcaster? What upcoming projects are we excited about? This miniapp is your one-stop-shop for
-            new and ongoing mints in the space.
+            What NFTs are we minting on Farcaster? What upcoming projects are we excited about? This miniapp is your
+            one-stop-shop for new and ongoing mints in the space.
           </div>
           <div style={{ marginTop: 8 }}>
             <RichText text="What are we missing? Tag @raspishake with your NFT mint miniapp." onHandleClick={onHandleClick} />
           </div>
-          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
-            {readyCalled ? "" : "Loading..."}
-          </div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>{readyCalled ? "" : "Loading..."}</div>
         </div>
       </div>
     </div>
