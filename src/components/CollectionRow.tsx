@@ -21,6 +21,14 @@ function looksLikeOpenSea(url: string): boolean {
   return url.toLowerCase().includes("opensea.io")
 }
 
+const NEW_PULSE_CSS = `
+@keyframes nftSeasonNewPulse {
+  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(138,180,255,0.75); }
+  55%  { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(138,180,255,0.00); }
+  100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(138,180,255,0.00); }
+}
+`
+
 export function CollectionRow({
   collection,
   primaryLabel,
@@ -50,6 +58,9 @@ export function CollectionRow({
         alignItems: "center"
       }}
     >
+      {/* Keep the keyframes close to where they're used so refactors can't break it again */}
+      <style>{NEW_PULSE_CSS}</style>
+
       <img
         src={collection.thumbnail}
         alt={collection.name}
@@ -67,7 +78,15 @@ export function CollectionRow({
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <div style={{ fontWeight: 900, fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div
+            style={{
+              fontWeight: 900,
+              fontSize: 14.5,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap"
+            }}
+          >
             {collection.name}
           </div>
 
@@ -75,12 +94,14 @@ export function CollectionRow({
             <span
               style={{
                 fontSize: 10.5,
-                fontWeight: 900,
-                color: "#8ab4ff",
-                border: "1px solid rgba(138,180,255,0.55)",
-                padding: "2px 6px",
+                fontWeight: 950,
+                color: "#0b0f14",
+                background: "rgba(138,180,255,0.92)",
+                border: "1px solid rgba(138,180,255,0.95)",
+                padding: "2px 7px",
                 borderRadius: 999,
-                animation: "featuredPulseGlow 1.2s infinite"
+                animation: "nftSeasonNewPulse 0.95s infinite",
+                transformOrigin: "center"
               }}
               title="New"
             >
