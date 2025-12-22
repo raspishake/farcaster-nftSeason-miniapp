@@ -16,7 +16,6 @@ export type Collection = {
 export type Group = {
   title: string
   description: string
-  lastUpdated: string
   itemIds: string[]
   featuredId?: string
 }
@@ -399,6 +398,16 @@ export const collectionsById: Record<string, Collection> = {
     network: "Base",
     highlight: true,
     thumbnail: TMP_THUMB
+  },
+
+  "sweep": {
+    id: "sweep",
+    name: "Sweep Zone",
+    creators: ["@horsefacts.eth"],
+    miniapp: "https://farcaster.xyz/miniapps/B94B28OhXPTH/sweepzone",
+    network: "Base",
+    highlight: true,
+    thumbnail: TMP_THUMB
   }
 }
 
@@ -407,7 +416,6 @@ export const groups: Group[] = [
   {
     title: "The Alpha",
     description: "No allowlist (yet)- mints incoming. Check in again for updates",
-    lastUpdated: "Dec 18, 2037",
     featuredId: "fid-mfers",
     itemIds: [
     ]
@@ -416,7 +424,6 @@ export const groups: Group[] = [
   {
     title: "Be Early",
     description: "The following allowlists are open",
-    lastUpdated: "Dec 18, 2037",
     featuredId: "the-apostles",
     itemIds: [
       "dickpunks",
@@ -426,7 +433,6 @@ export const groups: Group[] = [
   {
     title: "New Launches",
     description: "Time to click buttons. The following limited edition mints are Live.",
-    lastUpdated: "Dec 18, 2037",
     featuredId: "protardio",
     itemIds: [
       "petlets",
@@ -442,7 +448,6 @@ export const groups: Group[] = [
   {
     title: "Ongoing mints",
     description: "Projects you can just keep smashing mint button on.",
-    lastUpdated: "Dec 18, 2037",
     featuredId: "pixel-noun",
     itemIds: [
       "paint-people",
@@ -466,8 +471,6 @@ export const groups: Group[] = [
   {
     title: "You missed the Boat",
     description: "You are late. Mint has ended. Head to OpenSea and click there.",
-    lastUpdated: "Dec 18, 2037",
-    // Warplets can be in all, but ONLY featured here
     featuredId: "warplets",
     itemIds: [
       "waifulets",
@@ -488,7 +491,6 @@ export const groups: Group[] = [
   {
     title: "FID-NFTs",
     description: "NFTs tied to your Farcaster ID (FID)",
-    lastUpdated: "Dec 18, 2037",
     featuredId: "warplets",
     itemIds: [
       "arblets",
@@ -510,7 +512,6 @@ export const groups: Group[] = [
   {
     title: "Warplet-ification",
     description: "NFTs that are derivatives of your Warplet(s)",
-    lastUpdated: "Dec 18, 2037",
     featuredId: "petlets",
     itemIds: [
       "warplets",
@@ -528,10 +529,17 @@ export const groups: Group[] = [
   {
     title: "OG Collections",
     description: "NFTs that launched on Farcaster before the Farcaster Pro OG NFTs in June, 2025",
-    lastUpdated: "Dec 18, 2037",
     featuredId: "cryptoadickbutts",
     itemIds: [
       "farcaster-interns",
+    ]
+  },
+
+  {
+    title: "Other Cool Miniapps",
+    description: "Some other cool miniapps related to Farcaster NFTs collection curation",
+    featuredId: "sweep",
+    itemIds: [
     ]
   }
 ]

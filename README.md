@@ -1,4 +1,7 @@
 ````md
+# Vibe coding chat
+https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694470d3-747c-8329-92e7-5a5d27e50ae8
+
 # NFT Season
 
 A Farcaster Mini App that curates new, live, and past NFT mints across the Farcaster ecosystem.
