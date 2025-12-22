@@ -87,7 +87,15 @@ export default function App() {
         return hay.includes(q)
       })
 
-    base.sort((a: Collection, b: Collection) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+    // ORDER: NEW second (after featured), then alphabetically.
+    // Featured is not in this list because we filter it out above.
+    base.sort((a: Collection, b: Collection) => {
+      const aNew = Boolean(a.highlight)
+      const bNew = Boolean(b.highlight)
+      if (aNew !== bNew) return aNew ? -1 : 1
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    })
+
     return base
   }, [resolvedItems, query, activeGroup.featuredId])
 
@@ -268,24 +276,16 @@ export default function App() {
         >
           <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>It is NFT PFP PVP SZN on Farcaster!</div>
           <div style={{ marginTop: 6 }}>
-            <RichText
-              text="We are minting the NFT collections that define this cycle."
-              onHandleClick={onHandleClick}
-            />
+            <RichText text="We are minting the NFT collections that define this cycle." onHandleClick={onHandleClick} />
           </div>
           <div style={{ marginTop: 8 }}>
-            What NFTs are we minting on Farcaster? What upcoming projects are we excited about? This miniapp is your one-stop-shop for
-            new and ongoing mints in the space.
+            What NFTs are we minting on Farcaster? What upcoming projects are we excited about? This miniapp is your
+            one-stop-shop for new and ongoing mints in the space.
           </div>
           <div style={{ marginTop: 8 }}>
-            <RichText
-              text="What are we missing? Tag @raspishake with your NFT mint miniapp."
-              onHandleClick={onHandleClick}
-            />
+            <RichText text="What are we missing? Tag @raspishake with your NFT mint miniapp." onHandleClick={onHandleClick} />
           </div>
-          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
-            {readyCalled ? "" : "Loading..."}
-          </div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>{readyCalled ? "" : "Loading..."}</div>
         </div>
       </div>
     </div>

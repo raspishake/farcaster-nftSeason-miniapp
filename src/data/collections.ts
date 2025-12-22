@@ -357,6 +357,7 @@ export const collectionsById: Record<string, Collection> = {
     name: "Based Build",
     creators: ["@mevmonk"],
     miniapp: "https://basedbuilds.xyz/share?token=3&tx=0x0c33ab7d327ee94e28b1714a174fe097cdd251ee222d13799da23e559636c1b6",
+    opensea: "https://opensea.io/collection/basedbuilds",
     network: "Base",
     highlight: true,
     thumbnail: TMP_THUMB
@@ -409,7 +410,6 @@ export const groups: Group[] = [
     lastUpdated: "Dec 18, 2037",
     featuredId: "fid-mfers",
     itemIds: [
-      "fid-mfers"
     ]
   },
 
@@ -420,7 +420,6 @@ export const groups: Group[] = [
     featuredId: "the-apostles",
     itemIds: [
       "dickpunks",
-      "the-apostles"
     ]
   },
 
@@ -430,7 +429,6 @@ export const groups: Group[] = [
     lastUpdated: "Dec 18, 2037",
     featuredId: "protardio",
     itemIds: [
-      "protardio",
       "petlets",
       "frosty-friends",
       "waifu",
@@ -447,7 +445,6 @@ export const groups: Group[] = [
     lastUpdated: "Dec 18, 2037",
     featuredId: "pixel-noun",
     itemIds: [
-      "pixel-noun",
       "paint-people",
       "warplet-mfer",
       "warplet-nouns",
@@ -473,7 +470,6 @@ export const groups: Group[] = [
     // Warplets can be in all, but ONLY featured here
     featuredId: "warplets",
     itemIds: [
-      "warplets",
       "waifulets",
       "cloakies",
       "base-punks",
@@ -495,7 +491,6 @@ export const groups: Group[] = [
     lastUpdated: "Dec 18, 2037",
     featuredId: "warplets",
     itemIds: [
-      "warplets",
       "arblets",
       "fid-punks",
       "warplet-mfer",
@@ -519,7 +514,6 @@ export const groups: Group[] = [
     featuredId: "petlets",
     itemIds: [
       "warplets",
-      "petlets",
       "warplet-mfer",
       "warplet-nouns",
       "warplet-babies",
@@ -538,7 +532,6 @@ export const groups: Group[] = [
     featuredId: "cryptoadickbutts",
     itemIds: [
       "farcaster-interns",
-      "cryptoadickbutts"
     ]
   }
 ]
