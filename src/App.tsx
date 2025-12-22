@@ -302,7 +302,24 @@ export default function App() {
             </div>
 
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
-              <div style={{ fontWeight: 800 }}>miniapp created by @raspishake</div>
+		<div style={{ fontWeight: 800 }}>
+		  miniapp created by{" "}
+		  <button
+		    onClick={() => onHandleClick("@raspishake")}
+		    style={{
+		      background: "transparent",
+		      border: "none",
+		      padding: 0,
+		      margin: 0,
+		      color: "#8ab4ff",
+		      cursor: "pointer",
+		      fontWeight: 900
+			}}
+		    type="button"
+		  >
+		    @raspishake
+		  </button>
+		</div>
               <div style={{ marginTop: 2 }}>
                 (Raspberry Shake, S.A.,{" "}
                 <button
@@ -645,17 +662,17 @@ export default function App() {
           <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>IT IS NFT PFP PVP SZN ON Farcaster!</div>
           <div style={{ marginTop: 6 }}>
             <RichText
-              text="@opensea is either late to the party or completely MIA but we are minting the collections that define this cycle."
+              text="We are minting the collections that define this cycle."
               onHandleClick={onHandleClick}
             />
           </div>
           <div style={{ marginTop: 8 }}>
-            What NFTs are we minting? What upcoming projects are we excited about? This miniapp is your one-stop-shop for
-            new and ongoing mints in the space.
+            What NFTs are we minting on Farcaster? What upcoming projects are we excited about? This miniapp is your one-stop-shop for
+            new and ongoing Farcaster mints in the space.
           </div>
           <div style={{ marginTop: 8 }}>
             <RichText
-              text="What are we missing? Tag @raspishake with your NFT mint miniapp. You are not minting via a miniapp on Farcaster? We are not interested, get in here!"
+              text="What are we missing? Tag @raspishake with a link to your NFT mint miniapp."
               onHandleClick={onHandleClick}
             />
           </div>

@@ -163,7 +163,7 @@ export const collectionsById: Record<string, Collection> = {
   // “You missed the Boat” / OpenSea only
   warplets: {
     id: "warplets",
-    name: "Warplets",
+    name: "The Warplets",
     creators: ["@sayangel"],
     opensea: "https://opensea.io/collection/the-warplets-farcaster",
     network: "Base",
@@ -183,7 +183,8 @@ export const collectionsById: Record<string, Collection> = {
     id: "sheeplet",
     name: "Sheeplets",
     creators: ["@basewtf"],
-    opensea: "N/A",
+    miniapp: "https://thesheeplets.gobase.wtf/",
+    opensea: "https://opensea.io/item/base/0x756325fb738cf88197997cf6e5fc1bfb18963dcd/584",
     network: "Base",
     thumbnail: TMP_THUMB
   },
@@ -375,6 +376,24 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://warpletsweaters.frm.lol/warpletsweaters/minted/bafybeifsroay74hao3sctvjxfekvuvtmzhg6azofbbseawj2ixqmc7bzku",
     network: "Base",
     thumbnail: TMP_THUMB
+  },
+
+  "wecastwarplets-49k-mint": {
+    id: "wecastwarplets-49k-mint",
+    name: "WeCast Warplets",
+    creators: ["@chriscocreated"],
+    miniapp: "https://farcaster.xyz/miniapps/DLMNg-iBux-P/wecastwarplets-49k-mint",
+    network: "Base",
+    thumbnail: TMP_THUMB
+  },
+
+  "warplet-mash-up": {
+    id: "warplet-mash-up",
+    name: "Warplet Mash Up",
+    creators: ["@alec.eth"],
+    miniapp: "https://warplet-mashup.vercel.app/mashup/1766299224302-doo0vrdt3?participants=sayangel%2Clevertz&image=https%3A%2F%2Fcoral-sophisticated-albatross-902.mypinata.cloud%2Fipfs%2FQmNWvYmsSZMXrqt2iz36v7sWbKatNzzhZm3rgzSGqTU5E2",
+    network: "Base",
+    thumbnail: TMP_THUMB
   }
 }
 
@@ -413,6 +432,7 @@ export const groups: Group[] = [
       "waifu",
       "sophlet",
       "based-build",
+      "warplet-mash-up",
       "warplet-sweaters"
     ]
   },
@@ -436,6 +456,8 @@ export const groups: Group[] = [
       "tiny-turtles",
       "the-barcode",
       "farape-apes",
+      "sheeplet",
+      "wecastwarplets-49k-mint",
       "howlers"
     ]
   },
@@ -449,7 +471,6 @@ export const groups: Group[] = [
     itemIds: [
       "warplets",
       "waifulets",
-      "sheeplet",
       "cloakies",
       "base-punks",
       "fid-punks",
@@ -500,7 +521,20 @@ export const groups: Group[] = [
       "warplet-babies",
       "warplet-sweaters",
       "arblets",
+      "wecastwarplets-49k-mint",
+      "warplet-mash-up",
       "sheeplet"
+    ]
+  },
+
+  {
+    title: "OG Collections",
+    description: "NFTs that launched on Farcaster before the Farcaster Pro OG NFTs in June, 2025",
+    lastUpdated: "Dec 18, 2037",
+    featuredId: "cryptoadickbutts",
+    itemIds: [
+      "farcaster-interns",
+      "cryptoadickbutts"
     ]
   }
 ]
