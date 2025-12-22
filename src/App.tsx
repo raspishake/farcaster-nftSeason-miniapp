@@ -200,6 +200,8 @@ export default function App() {
             </div>
           </div>
 
+          <Tabs groups={groups} activeTitle={activeTab} onSelect={setActiveTab} />
+
           {/* Search */}
           <div style={{ marginTop: 12 }}>
             <input
@@ -218,10 +220,8 @@ export default function App() {
                 outline: "none"
               }}
             />
-          </div>
-
-          <Tabs groups={groups} activeTitle={activeTab} onSelect={setActiveTab} />
-        </div>
+	  </div>
+	</div>
 
         {/* Body */}
         <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
