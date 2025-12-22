@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "prebuild": "npm run validate:data",
+    "validate:data": "tsx scripts/validate-data.ts",
     "lint": "biome check src",
     "preview": "vite preview"
   },
@@ -24,11 +26,5 @@
     "tsx": "^4.21.0",
     "typescript": "^5.4.5",
     "vite": "^5.2.11"
-  },
-  "scripts": {
-    "validate:data": "tsx scripts/validate-data.ts",
-    "prebuild": "npm run validate:data",
-    "build": "tsc && vite build",
-    "dev": "vite"
   }
 }
