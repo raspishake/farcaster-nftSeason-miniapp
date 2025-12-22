@@ -4,170 +4,136 @@ import { RichText } from "./RichText"
 
 type Props = {
   collection: Collection
+
   primaryLabel: string
   primaryUrl: string | null
+
+  // Optional second button (usually OpenSea)
+  secondaryLabel?: string
   secondaryUrl: string | null
+
   onOpenPrimary: (c: Collection) => void
   onOpenSecondary: (c: Collection) => void
   onHandleClick: (handle: string) => void
 }
 
-const ANIM_CSS = `
-@keyframes newPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(90,160,255,0.0);
-    background-color: rgba(90,160,255,0.04);
-  }
-  50% {
-    box-shadow: 0 0 0 7px rgba(90,160,255,0.40);
-    background-color: rgba(90,160,255,0.12);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(90,160,255,0.0);
-    background-color: rgba(90,160,255,0.04);
-  }
+function looksLikeOpenSea(url: string): boolean {
+  return url.toLowerCase().includes("opensea.io")
 }
-
-@keyframes newBadgePulse {
-  0%, 100% { opacity: 0.65; transform: translateY(0px); }
-  50% { opacity: 1; transform: translateY(-0.5px); }
-}
-`
 
 export function CollectionRow({
   collection,
   primaryLabel,
   primaryUrl,
+  secondaryLabel,
   secondaryUrl,
   onOpenPrimary,
   onOpenSecondary,
   onHandleClick
 }: Props) {
-  const canPrimary = Boolean(primaryUrl && primaryUrl.trim())
-  const canSecondary = Boolean(secondaryUrl && secondaryUrl.trim())
+  const showPrimary = Boolean(primaryUrl)
+  const showSecondary = Boolean(secondaryUrl)
 
-  const isNew = Boolean((collection as any).highlight)
+  const resolvedSecondaryLabel =
+    (secondaryLabel && secondaryLabel.trim()) ||
+    (secondaryUrl ? (looksLikeOpenSea(secondaryUrl) ? "OpenSea" : "Open") : "")
 
   return (
     <div
       style={{
         border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 16,
+        borderRadius: 14,
+        background: "rgba(0,0,0,0.22)",
         padding: 12,
-        background: "rgba(255,255,255,0.02)",
         display: "flex",
         gap: 12,
-        alignItems: "center",
-        justifyContent: "space-between",
-        ...(isNew
-          ? {
-              borderColor: "rgba(90,160,255,0.85)",
-              animation: "newPulse 1.6s ease-in-out infinite"
-            }
-          : null)
+        alignItems: "center"
       }}
     >
-      <style>{ANIM_CSS}</style>
+      <img
+        src={collection.thumbnail}
+        alt={collection.name}
+        width={46}
+        height={46}
+        style={{
+          width: 46,
+          height: 46,
+          borderRadius: 12,
+          objectFit: "cover",
+          border: "1px solid rgba(255,255,255,0.12)",
+          flex: "0 0 auto"
+        }}
+      />
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
-        <img
-          src={collection.thumbnail}
-          alt=""
-          width={44}
-          height={44}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            objectFit: "cover",
-            border: "1px solid rgba(255,255,255,0.10)",
-            flex: "0 0 auto"
-          }}
-        />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div style={{ fontWeight: 900, fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {collection.name}
+          </div>
 
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <div
+          {collection.highlight ? (
+            <span
               style={{
+                fontSize: 10.5,
                 fontWeight: 900,
-                fontSize: 14.5,
-                color: "rgba(255,255,255,0.92)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis"
+                color: "#8ab4ff",
+                border: "1px solid rgba(138,180,255,0.55)",
+                padding: "2px 6px",
+                borderRadius: 999,
+                animation: "featuredPulseGlow 1.2s infinite"
               }}
-              title={collection.name}
+              title="New"
             >
-              {collection.name}
-            </div>
-
-            {isNew ? (
-              <div
-                style={{
-                  background: "#5aa0ff",
-                  color: "#0b0f14",
-                  fontSize: 10,
-                  fontWeight: 950,
-                  padding: "2px 7px",
-                  borderRadius: 7,
-                  letterSpacing: 0.2,
-                  animation: "newBadgePulse 1.1s ease-in-out infinite",
-                  flex: "0 0 auto"
-                }}
-                title="New addition"
-              >
-                NEW
-              </div>
-            ) : null}
-          </div>
-
-          <div style={{ marginTop: 3, fontSize: 12.25, color: "rgba(255,255,255,0.70)" }}>
-            <RichText text={`${collection.network}`} onHandleClick={onHandleClick} />
-          </div>
-
-          <div style={{ marginTop: 5, fontSize: 12.25, color: "rgba(255,255,255,0.70)" }}>
-            <RichText text={collection.creators.join(", ")} onHandleClick={onHandleClick} />
-          </div>
+              NEW
+            </span>
+          ) : null}
         </div>
+
+        <div style={{ marginTop: 3, fontSize: 12.25, color: "rgba(255,255,255,0.72)" }}>
+          <RichText text={collection.creators.join(" ")} onHandleClick={onHandleClick} />
+        </div>
+
+        <div style={{ marginTop: 4, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>{collection.network}</div>
       </div>
 
       <div style={{ display: "flex", gap: 8, flex: "0 0 auto" }}>
-        <button
-          type="button"
-          onClick={() => onOpenPrimary(collection)}
-          disabled={!canPrimary}
-          style={{
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.14)",
-            padding: "10px 12px",
-            background: canPrimary ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
-            color: canPrimary ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)",
-            cursor: canPrimary ? "pointer" : "not-allowed",
-            fontWeight: 900,
-            fontSize: 12.5
-          }}
-          title={canPrimary ? primaryUrl ?? "" : "No link available"}
-        >
-          {primaryLabel}
-        </button>
-
-        {canSecondary ? (
+        {showSecondary ? (
           <button
             type="button"
             onClick={() => onOpenSecondary(collection)}
             style={{
               borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.14)",
-              padding: "10px 12px",
-              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.16)",
+              background: "rgba(255,255,255,0.06)",
               color: "rgba(255,255,255,0.90)",
+              padding: "10px 10px",
+              fontWeight: 850,
               cursor: "pointer",
-              fontWeight: 900,
-              fontSize: 12.5
+              whiteSpace: "nowrap"
             }}
-            title={secondaryUrl ?? ""}
+            title={secondaryUrl ?? undefined}
           >
-            OpenSea
+            {resolvedSecondaryLabel}
+          </button>
+        ) : null}
+
+        {showPrimary ? (
+          <button
+            type="button"
+            onClick={() => onOpenPrimary(collection)}
+            style={{
+              borderRadius: 12,
+              border: "1px solid rgba(138,180,255,0.45)",
+              background: "rgba(138,180,255,0.16)",
+              color: "rgba(255,255,255,0.95)",
+              padding: "10px 12px",
+              fontWeight: 950,
+              cursor: "pointer",
+              whiteSpace: "nowrap"
+            }}
+            title={primaryUrl ?? undefined}
+          >
+            {primaryLabel}
           </button>
         ) : null}
       </div>

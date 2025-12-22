@@ -1,149 +1,127 @@
 // src/components/FeaturedCard.tsx
-import React from "react"
 import type { Collection } from "../data/collections"
+import { RichText } from "./RichText"
 
-const featuredPulseStyle: React.CSSProperties = {
-  animation: "featuredPulseGlow 2.4s ease-in-out infinite"
+type Props = {
+  collection: Collection
+
+  primaryLabel: string
+  primaryUrl: string | null
+
+  secondaryLabel?: string
+  secondaryUrl: string | null
+
+  onOpenPrimary: (c: Collection) => void
+  onOpenSecondary: (c: Collection) => void
+  onHandleClick: (handle: string) => void
 }
 
 export function FeaturedCard({
   collection,
   primaryLabel,
   primaryUrl,
+  secondaryLabel,
   secondaryUrl,
   onOpenPrimary,
   onOpenSecondary,
   onHandleClick
-}: {
-  collection: Collection
-  primaryLabel: string
-  primaryUrl: string | null
-  secondaryUrl: string | null
-  onOpenPrimary: (c: Collection) => void
-  onOpenSecondary: (c: Collection) => void
-  onHandleClick: (handle: string) => void
-}) {
-  const featured = collection
+}: Props) {
+  const showPrimary = Boolean(primaryUrl)
+  const showSecondary = Boolean(secondaryUrl)
 
   return (
     <div
       style={{
-        border: "1px solid rgba(255,255,255,0.25)",
-        background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
-        borderRadius: 16,
+        borderRadius: 18,
+        border: "1px solid rgba(138,180,255,0.35)",
+        background: "rgba(138,180,255,0.08)",
         padding: 14,
-        boxShadow: "0 0 0 1px rgba(138,180,255,0.25), 0 12px 30px rgba(0,0,0,0.45)"
+        boxShadow: "0 10px 30px rgba(0,0,0,0.35)"
       }}
     >
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img
-          src={featured.thumbnail}
-          alt={`${featured.name} thumbnail`}
+          src={collection.thumbnail}
+          alt={collection.name}
+          width={56}
+          height={56}
           style={{
-            width: 54,
-            height: 54,
+            width: 56,
+            height: 56,
             borderRadius: 14,
             objectFit: "cover",
-            border: "1px solid rgba(255,255,255,0.15)",
+            border: "1px solid rgba(255,255,255,0.14)",
             flex: "0 0 auto"
           }}
         />
 
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 0.2 }}>{featured.name}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 950, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {collection.name}
+            </div>
+
             <span
               style={{
-                ...featuredPulseStyle,
-                fontSize: 11,
-                padding: "3px 8px",
+                fontSize: 10.5,
+                fontWeight: 950,
+                color: "#8ab4ff",
+                border: "1px solid rgba(138,180,255,0.55)",
+                padding: "2px 8px",
                 borderRadius: 999,
-                background: "rgba(138,180,255,0.18)",
-                border: "1px solid rgba(138,180,255,0.35)",
-                color: "#cfe0ff",
-                fontWeight: 900
+                animation: "featuredPulseGlow 1.1s infinite"
               }}
+              title="Featured"
             >
               FEATURED
             </span>
-            <span
-              style={{
-                fontSize: 11,
-                padding: "3px 8px",
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.75)",
-                fontWeight: 800
-              }}
-            >
-              {featured.network}
-            </span>
           </div>
 
-          <div style={{ marginTop: 6, fontSize: 12.5, color: "rgba(255,255,255,0.78)" }}>
-            <span style={{ color: "rgba(255,255,255,0.6)" }}>Creators: </span>
-            {featured.creators.length ? (
-              featured.creators.map((cr: string, i: number) => (
-                <React.Fragment key={`${featured.id}-cr-${i}`}>
-                  {i > 0 ? ", " : ""}
-                  <button
-                    onClick={() => onHandleClick(cr)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      padding: 0,
-                      margin: 0,
-                      color: "#8ab4ff",
-                      cursor: "pointer",
-                      fontWeight: 800
-                    }}
-                    type="button"
-                  >
-                    {cr}
-                  </button>
-                </React.Fragment>
-              ))
-            ) : (
-              <span>N/A</span>
-            )}
+          <div style={{ marginTop: 4, fontSize: 12.25, color: "rgba(255,255,255,0.78)" }}>
+            <RichText text={collection.creators.join(" ")} onHandleClick={onHandleClick} />
           </div>
+
+          <div style={{ marginTop: 4, fontSize: 11.5, color: "rgba(255,255,255,0.58)" }}>{collection.network}</div>
         </div>
 
-        <div style={{ marginLeft: "auto", flex: "0 0 auto", display: "flex", gap: 8 }}>
-          {primaryUrl ? (
+        <div style={{ display: "flex", gap: 8, flex: "0 0 auto" }}>
+          {showSecondary ? (
             <button
-              onClick={() => onOpenPrimary(featured)}
+              type="button"
+              onClick={() => onOpenSecondary(collection)}
               style={{
-                padding: "10px 12px",
                 borderRadius: 12,
                 border: "1px solid rgba(255,255,255,0.18)",
-                background: "rgba(138,180,255,0.16)",
-                color: "#eaf1ff",
+                background: "rgba(0,0,0,0.22)",
+                color: "rgba(255,255,255,0.92)",
+                padding: "10px 10px",
                 fontWeight: 900,
-                cursor: "pointer"
+                cursor: "pointer",
+                whiteSpace: "nowrap"
               }}
-              type="button"
+              title={secondaryUrl ?? undefined}
             >
-              {primaryLabel}
+              {secondaryLabel && secondaryLabel.trim() ? secondaryLabel.trim() : "Open"}
             </button>
           ) : null}
 
-          {secondaryUrl ? (
+          {showPrimary ? (
             <button
-              onClick={() => onOpenSecondary(featured)}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "rgba(255,255,255,0.06)",
-                color: "rgba(255,255,255,0.86)",
-                fontWeight: 800,
-                cursor: "pointer"
-              }}
               type="button"
+              onClick={() => onOpenPrimary(collection)}
+              style={{
+                borderRadius: 12,
+                border: "1px solid rgba(138,180,255,0.55)",
+                background: "rgba(138,180,255,0.22)",
+                color: "rgba(255,255,255,0.96)",
+                padding: "10px 12px",
+                fontWeight: 950,
+                cursor: "pointer",
+                whiteSpace: "nowrap"
+              }}
+              title={primaryUrl ?? undefined}
             >
-              OpenSea
+              {primaryLabel}
             </button>
           ) : null}
         </div>

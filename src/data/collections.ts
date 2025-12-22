@@ -2,6 +2,12 @@
 
 export type Network = "Base" | "Arbitrum" | "Degen" | "Ethereum"
 
+// shared override type
+export type ActionLabelOverride = {
+  miniapp?: string
+  opensea?: string
+}
+
 export type Collection = {
   id: string
   name: string
@@ -11,6 +17,10 @@ export type Collection = {
   network: Network
   thumbnail: string
   highlight?: boolean
+
+  // Button label overrides (per-link-type)
+  primaryActionLabelOverride?: ActionLabelOverride //to override "Mint" for miniapp:
+  secondaryActionLabelOverride?: ActionLabelOverride //to override "OpenSea" for opensea:
 }
 
 export type Group = {
@@ -99,6 +109,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://farcaster.xyz/miniapps/JBWDbpN3nSow/pixel-nouns",
     opensea: "https://explorer.degen.tips/token/0x6fB0F96Bb2dCD32388eBBB6b13608928Ed538218",
     network: "Degen",
+    secondaryActionLabelOverride: { opensea: "View" },
     thumbnail: TMP_THUMB
   },
 
@@ -407,6 +418,9 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://farcaster.xyz/miniapps/B94B28OhXPTH/sweepzone",
     network: "Base",
     highlight: true,
+    primaryActionLabelOverride: {
+	miniapp: "Open"
+    },
     thumbnail: TMP_THUMB
   }
 }
