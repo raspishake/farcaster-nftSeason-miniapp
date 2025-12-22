@@ -1,164 +1,18 @@
 // src/App.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { sdk } from "@farcaster/miniapp-sdk"
 import { collectionsById, groups, type Collection, type Group } from "./data/collections"
+import { openMiniAppOrUrl, safeOpenUrl } from "./lib/urls"
+import { viewProfileByHandle } from "./lib/farcaster"
+import { RichText } from "./components/RichText"
+import { Tabs } from "./components/Tabs"
+import { FeaturedCard } from "./components/FeaturedCard"
+import { CollectionRow } from "./components/CollectionRow"
 
 type TabKey = string
 
-function normalizeHandle(handle: string): string {
-  const h = handle.trim()
-  return h.startsWith("@") ? h.slice(1) : h
-}
-
-function isProbablyHandleToken(token: string): boolean {
-  return /^@[a-z0-9][a-z0-9\-_.]{0,63}$/i.test(token)
-}
-
-function toMiniAppOpenUrl(raw: string): string {
-  const s = raw.trim()
-  if (!s) return s
-
-  // Remove hash fragments (they can break deep links in some shells)
-  const noHash = (s.split("#")[0] ?? s).trim()
-
-  // Ensure https://
-  const withProtocol = /^https?:\/\//i.test(noHash) ? noHash : `https://${noHash}`
-
-  // Collapse accidental double slashes in the path (keep "https://")
-  try {
-    const u = new URL(withProtocol)
-    u.pathname = u.pathname.replace(/\/{2,}/g, "/")
-    return u.toString()
-  } catch {
-    // If URL parsing fails, return the best effort
-    return withProtocol.replace(/([^:]\/)\/+/g, "$1")
-  }
-}
-
-async function safeOpenUrl(url: string): Promise<void> {
-  const finalUrl = toMiniAppOpenUrl(url)
-  if (!finalUrl) return
-
-  try {
-    await sdk.actions.openUrl(finalUrl)
-    return
-  } catch {
-    window.location.href = finalUrl
-  }
-}
-
-async function openMiniAppOrUrl(url: string): Promise<void> {
-  const openMiniAppUrl = toMiniAppOpenUrl(url)
-  if (!openMiniAppUrl) return
-
-  try {
-    // Prefer opening inside Farcaster miniapp shell (works for farcaster.xyz/miniapps/* and valid embed URLs)
-    await sdk.actions.openMiniApp({ url: openMiniAppUrl })
-    return
-  } catch {
-    // Fallback to normal navigation
-    await safeOpenUrl(openMiniAppUrl)
-  }
-}
-
-async function resolveFidByUsername(username: string): Promise<number | null> {
-  const u = normalizeHandle(username)
-  const endpoint = `https://api.warpcast.com/v2/user-by-username?username=${encodeURIComponent(u)}`
-
-  try {
-    const res = await fetch(endpoint, { method: "GET" })
-    if (!res.ok) return null
-    const data = (await res.json()) as any
-    const fid = data?.result?.user?.fid ?? data?.user?.fid ?? data?.result?.fid ?? null
-    return typeof fid === "number" ? fid : null
-  } catch {
-    return null
-  }
-}
-
-async function viewProfileByHandle(handle: string, fidCache: Map<string, number>): Promise<void> {
-  const h = normalizeHandle(handle).toLowerCase()
-  const fallback = async () => safeOpenUrl(`https://warpcast.com/${encodeURIComponent(h)}`)
-
-  try {
-    const cached = fidCache.get(h)
-    if (typeof cached === "number") {
-      try {
-        await sdk.actions.viewProfile({ fid: cached })
-        return
-      } catch {
-        await fallback()
-        return
-      }
-    }
-
-    const fid = await resolveFidByUsername(h)
-    if (typeof fid === "number") {
-      fidCache.set(h, fid)
-      try {
-        await sdk.actions.viewProfile({ fid })
-        return
-      } catch {
-        await fallback()
-        return
-      }
-    }
-
-    await fallback()
-  } catch {
-    await fallback()
-  }
-}
-
-function RichText({
-  text,
-  onHandleClick,
-  linkColor = "#8ab4ff"
-}: {
-  text: string
-  onHandleClick: (handle: string) => void
-  linkColor?: string
-}) {
-  const parts = useMemo(() => text.split(/(\s+)/), [text])
-
-  return (
-    <>
-      {parts.map((p, idx) => {
-        if (!p.trim()) return <React.Fragment key={idx}>{p}</React.Fragment>
-
-        const stripped = p.replace(/[),.;:!?]+$/g, "")
-        if (isProbablyHandleToken(stripped)) {
-          return (
-            <button
-              key={idx}
-              onClick={() => onHandleClick(stripped)}
-              style={{
-                background: "transparent",
-                border: "none",
-                padding: 0,
-                margin: 0,
-                color: linkColor,
-                cursor: "pointer",
-                fontWeight: 800,
-                pointerEvents: "auto"
-              }}
-              title={`Open @${normalizeHandle(stripped)} on Farcaster`}
-              type="button"
-            >
-              {p}
-            </button>
-          )
-        }
-
-        return <React.Fragment key={idx}>{p}</React.Fragment>
-      })}
-    </>
-  )
-}
-
 function primaryActionLabel(groupTitle: string, primaryUrl: string | null): string {
   const url = (primaryUrl ?? "").toLowerCase()
-
   if (url.includes("opensea.io")) return "OpenSea"
   if (groupTitle === "Be Early") return "Allow List"
   return "Mint"
@@ -179,10 +33,6 @@ function collectionSecondaryUrl(c: Collection, groupTitle: string): string | nul
   if (groupTitle === "You missed the Boat") return null
   if (c.miniapp && c.opensea && c.opensea !== "N/A") return c.opensea
   return null
-}
-
-const featuredPulseStyle: React.CSSProperties = {
-  animation: "featuredPulseGlow 2.4s ease-in-out infinite"
 }
 
 export default function App() {
@@ -225,7 +75,6 @@ export default function App() {
     return list
   }, [activeGroup])
 
-  // Featured should ONLY appear at top, never in list, sorting alphabetical by name.
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase()
 
@@ -239,24 +88,23 @@ export default function App() {
       })
 
     base.sort((a: Collection, b: Collection) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-
     return base
   }, [resolvedItems, query, activeGroup.featuredId])
 
   async function onOpenPrimary(c: Collection): Promise<void> {
     const url = collectionPrimaryUrl(c, activeGroup.title)
     if (!url) return
-    await openMiniAppOrUrl(url)
+    await openMiniAppOrUrl(sdk, url)
   }
 
   async function onOpenSecondary(c: Collection): Promise<void> {
     const url = collectionSecondaryUrl(c, activeGroup.title)
     if (!url) return
-    await openMiniAppOrUrl(url)
+    await openMiniAppOrUrl(sdk, url)
   }
 
   function onHandleClick(handle: string): void {
-    void viewProfileByHandle(handle, fidCacheRef.current)
+    void viewProfileByHandle(sdk as any, handle, fidCacheRef.current)
   }
 
   return (
@@ -302,28 +150,29 @@ export default function App() {
             </div>
 
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
-		<div style={{ fontWeight: 800 }}>
-		  miniapp created by{" "}
-		  <button
-		    onClick={() => onHandleClick("@raspishake")}
-		    style={{
-		      background: "transparent",
-		      border: "none",
-		      padding: 0,
-		      margin: 0,
-		      color: "#8ab4ff",
-		      cursor: "pointer",
-		      fontWeight: 900
-			}}
-		    type="button"
-		  >
-		    @raspishake
-		  </button>
-		</div>
+              <div style={{ fontWeight: 800 }}>
+                miniapp created by{" "}
+                <button
+                  onClick={() => onHandleClick("@raspishake")}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    margin: 0,
+                    color: "#8ab4ff",
+                    cursor: "pointer",
+                    fontWeight: 900
+                  }}
+                  type="button"
+                  title="Open @raspishake on Farcaster"
+                >
+                  @raspishake
+                </button>
+              </div>
               <div style={{ marginTop: 2 }}>
                 (Raspberry Shake, S.A.,{" "}
                 <button
-                  onClick={() => void safeOpenUrl("https://raspberryshake.org")}
+                  onClick={() => void safeOpenUrl(sdk, "https://raspberryshake.org")}
                   style={{
                     background: "transparent",
                     border: "none",
@@ -363,31 +212,7 @@ export default function App() {
             />
           </div>
 
-          {/* Tabs */}
-          <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {groups.map((g: Group) => {
-              const active = g.title === activeTab
-              return (
-                <button
-                  key={g.title}
-                  onClick={() => setActiveTab(g.title)}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    background: active ? "rgba(138,180,255,0.18)" : "rgba(255,255,255,0.06)",
-                    color: active ? "#eaf1ff" : "rgba(255,255,255,0.80)",
-                    cursor: "pointer",
-                    fontWeight: 800,
-                    fontSize: 12.5
-                  }}
-                  type="button"
-                >
-                  {g.title}
-                </button>
-              )
-            })}
-          </div>
+          <Tabs groups={groups} activeTitle={activeTab} onSelect={setActiveTab} />
         </div>
 
         {/* Body */}
@@ -399,251 +224,33 @@ export default function App() {
             </div>
           </div>
 
-          {/* Featured (ONLY here, never in list) */}
           {featured ? (
-            <div
-              style={{
-                border: "1px solid rgba(255,255,255,0.25)",
-                background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
-                borderRadius: 16,
-                padding: 14,
-                boxShadow: "0 0 0 1px rgba(138,180,255,0.25), 0 12px 30px rgba(0,0,0,0.45)"
-              }}
-            >
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <img
-                  src={featured.thumbnail}
-                  alt={`${featured.name} thumbnail`}
-                  style={{
-                    width: 54,
-                    height: 54,
-                    borderRadius: 14,
-                    objectFit: "cover",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    flex: "0 0 auto"
-                  }}
-                />
-
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 0.2 }}>{featured.name}</div>
-                    <span
-                      style={{
-                        ...featuredPulseStyle,
-                        fontSize: 11,
-                        padding: "3px 8px",
-                        borderRadius: 999,
-                        background: "rgba(138,180,255,0.18)",
-                        border: "1px solid rgba(138,180,255,0.35)",
-                        color: "#cfe0ff",
-                        fontWeight: 900
-                      }}
-                    >
-                      FEATURED
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        padding: "3px 8px",
-                        borderRadius: 999,
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        color: "rgba(255,255,255,0.75)",
-                        fontWeight: 800
-                      }}
-                    >
-                      {featured.network}
-                    </span>
-                  </div>
-
-                  <div style={{ marginTop: 6, fontSize: 12.5, color: "rgba(255,255,255,0.78)" }}>
-                    <span style={{ color: "rgba(255,255,255,0.6)" }}>Creators: </span>
-                    {featured.creators.length ? (
-                      featured.creators.map((cr: string, i: number) => (
-                        <React.Fragment key={`${featured.id}-cr-${i}`}>
-                          {i > 0 ? ", " : ""}
-                          <button
-                            onClick={() => onHandleClick(cr)}
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              padding: 0,
-                              margin: 0,
-                              color: "#8ab4ff",
-                              cursor: "pointer",
-                              fontWeight: 800
-                            }}
-                            type="button"
-                          >
-                            {cr}
-                          </button>
-                        </React.Fragment>
-                      ))
-                    ) : (
-                      <span>N/A</span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ marginLeft: "auto", flex: "0 0 auto", display: "flex", gap: 8 }}>
-                  {collectionPrimaryUrl(featured, activeGroup.title) ? (
-                    <button
-                      onClick={() => void onOpenPrimary(featured)}
-                      style={{
-                        padding: "10px 12px",
-                        borderRadius: 12,
-                        border: "1px solid rgba(255,255,255,0.18)",
-                        background: "rgba(138,180,255,0.16)",
-                        color: "#eaf1ff",
-                        fontWeight: 900,
-                        cursor: "pointer"
-                      }}
-                      type="button"
-                    >
-                      {primaryActionLabel(activeGroup.title, collectionPrimaryUrl(featured, activeGroup.title))}
-                    </button>
-                  ) : null}
-
-                  {collectionSecondaryUrl(featured, activeGroup.title) ? (
-                    <button
-                      onClick={() => void onOpenSecondary(featured)}
-                      style={{
-                        padding: "10px 12px",
-                        borderRadius: 12,
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        background: "rgba(255,255,255,0.06)",
-                        color: "rgba(255,255,255,0.86)",
-                        fontWeight: 800,
-                        cursor: "pointer"
-                      }}
-                      type="button"
-                    >
-                      OpenSea
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+            <FeaturedCard
+              collection={featured}
+              primaryLabel={primaryActionLabel(activeGroup.title, collectionPrimaryUrl(featured, activeGroup.title))}
+              primaryUrl={collectionPrimaryUrl(featured, activeGroup.title)}
+              secondaryUrl={collectionSecondaryUrl(featured, activeGroup.title)}
+              onOpenPrimary={c => void onOpenPrimary(c)}
+              onOpenSecondary={c => void onOpenSecondary(c)}
+              onHandleClick={onHandleClick}
+            />
           ) : null}
 
-          {/* List */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {filteredItems.map((c: Collection) => {
               const primaryUrl = collectionPrimaryUrl(c, activeGroup.title)
               const secondaryUrl = collectionSecondaryUrl(c, activeGroup.title)
-
               return (
-                <div
+                <CollectionRow
                   key={`${activeGroup.title}-${c.id}`}
-                  style={{
-                    borderRadius: 16,
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    background: "rgba(255,255,255,0.04)",
-                    padding: 12,
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "center"
-                  }}
-                >
-                  <img
-                    src={c.thumbnail}
-                    alt={`${c.name} thumbnail`}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
-                      objectFit: "cover",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      flex: "0 0 auto"
-                    }}
-                  />
-
-                  <div style={{ minWidth: 0, flex: "1 1 auto" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <div style={{ fontSize: 15.5, fontWeight: 900, letterSpacing: 0.1 }}>{c.name}</div>
-                      <span
-                        style={{
-                          fontSize: 10.5,
-                          padding: "3px 7px",
-                          borderRadius: 999,
-                          background: "rgba(255,255,255,0.07)",
-                          border: "1px solid rgba(255,255,255,0.10)",
-                          color: "rgba(255,255,255,0.70)",
-                          fontWeight: 800
-                        }}
-                      >
-                        {c.network}
-                      </span>
-                    </div>
-
-                    <div style={{ marginTop: 6, fontSize: 12.25, color: "rgba(255,255,255,0.78)" }}>
-                      <span style={{ color: "rgba(255,255,255,0.55)" }}>Creators: </span>
-                      {c.creators.length ? (
-                        c.creators.map((cr: string, i: number) => (
-                          <React.Fragment key={`${c.id}-creator-${i}`}>
-                            {i > 0 ? ", " : ""}
-                            <button
-                              onClick={() => onHandleClick(cr)}
-                              style={{
-                                background: "transparent",
-                                border: "none",
-                                padding: 0,
-                                margin: 0,
-                                color: "#8ab4ff",
-                                cursor: "pointer",
-                                fontWeight: 800
-                              }}
-                              type="button"
-                            >
-                              {cr}
-                            </button>
-                          </React.Fragment>
-                        ))
-                      ) : (
-                        <span>N/A</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, flex: "0 0 auto" }}>
-                    {primaryUrl ? (
-                      <button
-                        onClick={() => void onOpenPrimary(c)}
-                        style={{
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          border: "1px solid rgba(255,255,255,0.16)",
-                          background: "rgba(255,255,255,0.06)",
-                          color: "rgba(255,255,255,0.92)",
-                          fontWeight: 900,
-                          cursor: "pointer",
-                          minWidth: 92
-                        }}
-                        type="button"
-                      >
-                        {primaryActionLabel(activeGroup.title, primaryUrl)}
-                      </button>
-                    ) : null}
-
-                    {secondaryUrl ? (
-                      <button
-                        onClick={() => void onOpenSecondary(c)}
-                        style={{
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          background: "rgba(255,255,255,0.04)",
-                          color: "rgba(255,255,255,0.84)",
-                          fontWeight: 800,
-                          cursor: "pointer"
-                        }}
-                        type="button"
-                      >
-                        OpenSea
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
+                  collection={c}
+                  primaryLabel={primaryActionLabel(activeGroup.title, primaryUrl)}
+                  primaryUrl={primaryUrl}
+                  secondaryUrl={secondaryUrl}
+                  onOpenPrimary={cc => void onOpenPrimary(cc)}
+                  onOpenSecondary={cc => void onOpenSecondary(cc)}
+                  onHandleClick={onHandleClick}
+                />
               )
             })}
           </div>
@@ -659,24 +266,26 @@ export default function App() {
             lineHeight: 1.35
           }}
         >
-          <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>IT IS NFT PFP PVP SZN ON Farcaster!</div>
+          <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>It is NFT PFP PVP SZN on Farcaster!</div>
           <div style={{ marginTop: 6 }}>
             <RichText
-              text="We are minting the collections that define this cycle."
+              text="We are minting the NFT collections that define this cycle."
               onHandleClick={onHandleClick}
             />
           </div>
           <div style={{ marginTop: 8 }}>
             What NFTs are we minting on Farcaster? What upcoming projects are we excited about? This miniapp is your one-stop-shop for
-            new and ongoing Farcaster mints in the space.
+            new and ongoing mints in the space.
           </div>
           <div style={{ marginTop: 8 }}>
             <RichText
-              text="What are we missing? Tag @raspishake with a link to your NFT mint miniapp."
+              text="What are we missing? Tag @raspishake with your NFT mint miniapp."
               onHandleClick={onHandleClick}
             />
           </div>
-          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>{readyCalled ? "" : "Loading..."}</div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
+            {readyCalled ? "" : "Loading..."}
+          </div>
         </div>
       </div>
     </div>
