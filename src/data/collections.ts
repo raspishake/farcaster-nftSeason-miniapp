@@ -41,7 +41,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@smolemaru"],
     miniapp: "TBA",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/fid-mfer.png"
   },
 
  dickpunks: {
@@ -110,7 +110,7 @@ export const collectionsById: Record<string, Collection> = {
     opensea: "https://explorer.degen.tips/token/0x6fB0F96Bb2dCD32388eBBB6b13608928Ed538218",
     network: "Degen",
     secondaryActionLabelOverride: { opensea: "View" },
-    thumbnail: "/thumbs/pixel-noun.png"
+    thumbnail: "/thumbs/pixel-nouns-bot.png"
   },
 
   "paint-people": {
@@ -380,7 +380,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://immutagen.ai/mint/d964d9a2-6707-4b3e-98a5-c505ae0d04d1?generationId=978c332b-aa9d-42c0-b8d0-7c044ca023a9",
     network: "Base",
     highlight: true,
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/sophlets.png"
   },
 
   "warplet-sweaters": {
@@ -408,7 +408,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://warplet-mashup.vercel.app/mashup/1766299224302-doo0vrdt3?participants=sayangel%2Clevertz&image=https%3A%2F%2Fcoral-sophisticated-albatross-902.mypinata.cloud%2Fipfs%2FQmNWvYmsSZMXrqt2iz36v7sWbKatNzzhZm3rgzSGqTU5E2",
     network: "Base",
     highlight: true,
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/warplet-mash-up.png"
   },
 
   "sweep": {

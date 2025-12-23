@@ -9,8 +9,7 @@
     "prebuild": "npm run validate:data",
     "validate:data": "tsx scripts/validate-data.ts",
     "lint": "biome check src",
-    "thumbs": "tsx scripts/generate-thumbnails.ts",
-    "thumbs:force": "tsx scripts/generate-thumbnails.ts --force",
+    "resize": "tsx scripts/resizethumbnails.ts",
     "preview": "vite preview"
   },
   "dependencies": {

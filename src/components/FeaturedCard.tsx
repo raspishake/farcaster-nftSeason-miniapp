@@ -53,11 +53,11 @@ export function FeaturedCard({
       <img
         src={collection.thumbnail}
         alt={collection.name}
-        width={80}
-        height={80}
+        width={100}
+        height={100}
         style={{
-          width: 80,
-          height: 80,
+          width: 100,
+          height: 100,
           borderRadius: 16,
           objectFit: "cover",
           border: "1px solid rgba(255,255,255,0.14)",
