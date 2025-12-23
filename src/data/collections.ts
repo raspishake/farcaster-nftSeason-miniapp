@@ -30,11 +30,11 @@ export type Group = {
   featuredId?: string
 }
 
-const TMP_THUMB = "/thumbs/tmp.png"
+//const TMP_THUMB = "/thumbs/tmp.png"
 
 // Single source of truth: define each collection once.
 export const collectionsById: Record<string, Collection> = {
-  // Existing
+
   "fid-mfers": {
     id: "fid-mfers",
     name: "fidMfers",
@@ -128,7 +128,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@pratiksharma.eth"],
     miniapp: "https://farcaster.xyz/miniapps/lvNNJ5A8VRiK/not-punks",
     network: "Base",
-    thumbnail: "/thumbs/not-punks.png"
+    thumbnail: "/thumbs/notpunks.png"
   },
 
   mogpunks: {
@@ -171,7 +171,6 @@ export const collectionsById: Record<string, Collection> = {
     thumbnail: "/thumbs/howlers.png"
   },
 
-  // “You missed the Boat” / OpenSea only
   warplets: {
     id: "warplets",
     name: "The Warplets",
@@ -269,16 +268,15 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@miguelgarest"],
     opensea: "https://opensea.io/collection/farcaster-pro-og",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/pro.png"
   },
 
-  // More projects
   "og-nft": {
     id: "og-nft",
     name: "OG NFTs",
     creators: ["@Unknown"],
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/og.png"
   },
 
   "farape-apes": {
@@ -287,7 +285,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@recessdotfun"],
     miniapp: "https://farcaster.xyz/miniapps/sqYk09wRm676/farape",
     network: "Base",
-    thumbnail: "/thumbs/farape-apes.png"
+    thumbnail: "/thumbs/farape.png"
   },
 
   "fid-azuki": {
@@ -305,7 +303,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://farcaster.xyz/miniapps/XQktyvz1H9zn/warplet-mfers",
     network: "Base",
-    thumbnail: "/thumbs/warplet-mfer.png"
+    thumbnail: "/thumbs/mfer.png"
   },
 
   "warplet-nouns": {
@@ -314,7 +312,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://farcaster.xyz/miniapps/Pvs6xfVCnvqn/warplet-nouns",
     network: "Base",
-    thumbnail: "/thumbs/warplet-nouns.png"
+    thumbnail: "/thumbs/nouns.png"
   },
 
   "warplet-babies": {
@@ -323,7 +321,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://farcaster.xyz/miniapps/iyhggRrAsWJK/warplet-babies",
     network: "Base",
-    thumbnail: "/thumbs/warplet-babies.png"
+    thumbnail: "/thumbs/babies.png"
   },
 
   "the-barcode": {
@@ -332,7 +330,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@thebarcode"],
     miniapp: "https://farcaster.xyz/miniapps/lGupNaXO2fv8/the-barcode",
     network: "Base",
-    thumbnail: "/thumbs/the-barcode.png"
+    thumbnail: "/thumbs/barcode.png"
   },
 
   "farcaster-constellation": {
@@ -341,7 +339,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@jesse7.eth"],
     miniapp: "https://farcaster.xyz/miniapps/1QWOndscTLyV/social-constellation-nft",
     network: "Base",
-    thumbnail: "/thumbs/farcaster-constellation.png"
+    thumbnail: "/thumbs/constellation.png"
   },
 
   "farcaster-dino": {
@@ -350,7 +348,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@0xsayan.eth"],
     miniapp: "https://farcaster.xyz/miniapps/Pjm_FOONcY1K/farcaster-dinos-mint",
     network: "Arbitrum",
-    thumbnail: "/thumbs/farcaster-dino.png"
+    thumbnail: "/thumbs/dinos.png"
   },
 
   arblets: {
@@ -398,7 +396,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@chriscocreated"],
     miniapp: "https://farcaster.xyz/miniapps/DLMNg-iBux-P/wecastwarplets-49k-mint",
     network: "Base",
-    thumbnail: "/thumbs/wecastwarplets-49k-mint.png"
+    thumbnail: "/thumbs/wecast.png"
   },
 
   "warplet-mash-up": {
@@ -411,9 +409,18 @@ export const collectionsById: Record<string, Collection> = {
     thumbnail: "/thumbs/warplet-mash-up.png"
   },
 
+  "wordlets": {
+    id: "wordlets",
+    name: "Wordlets",
+    creators: ["@0xspencer"],
+    miniapp: "https://farcaster.xyz/miniapps/2BLcqRzDLTXv/wordlets",
+    network: "Base",
+    thumbnail: "/thumbs/wordlets.png"
+  },
+
   "sweep": {
     id: "sweep",
-    name: "Sweep Zone",
+    name: "sweep.zone",
     creators: ["@horsefacts.eth"],
     miniapp: "https://farcaster.xyz/miniapps/B94B28OhXPTH/sweepzone",
     network: "Base",
@@ -423,6 +430,7 @@ export const collectionsById: Record<string, Collection> = {
     thumbnail: "/thumbs/sweep.png"
   }
 }
+
 
 // Groups reference collections by ID, no duplication.
 export const groups: Group[] = [
@@ -486,6 +494,7 @@ export const groups: Group[] = [
       "the-barcode",
       "farape-apes",
       "sheeplet",
+      "wordlets",
       "wecastwarplets-49k-mint",
       "howlers"
     ]
@@ -545,6 +554,7 @@ export const groups: Group[] = [
       "arblets",
       "wecastwarplets-49k-mint",
       "warplet-mash-up",
+      "wordlets",
       "sheeplet"
     ]
   },

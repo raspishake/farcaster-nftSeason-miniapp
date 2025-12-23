@@ -1,6 +1,5 @@
 maintenance:
 - add older collections
-- add missing thumbnails
 - Update README:
  here is the latest version of the readme- see attached
  update it
