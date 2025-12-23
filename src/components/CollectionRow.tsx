@@ -5,11 +5,10 @@ import { RichText } from "./RichText"
 type Props = {
   collection: Collection
 
-  // Primary button (intended: miniapp/open)
   primaryLabel: string
   primaryUrl: string | null
 
-  // Secondary button (intended: opensea/view)
+  // Optional second button (usually OpenSea)
   secondaryLabel?: string
   secondaryUrl: string | null
 
@@ -19,8 +18,7 @@ type Props = {
 }
 
 function looksLikeOpenSea(url: string): boolean {
-  const u = url.toLowerCase()
-  return u.includes("opensea.io") || u.includes("opensea")
+  return url.toLowerCase().includes("opensea.io")
 }
 
 export function CollectionRow({
@@ -49,17 +47,17 @@ export function CollectionRow({
         padding: 12,
         display: "flex",
         gap: 12,
-        alignItems: "flex-start"
+        alignItems: "center"
       }}
     >
       <img
         src={collection.thumbnail}
         alt={collection.name}
-        width={46}
-        height={46}
+        width={80}
+        height={80}
         style={{
-          width: 46,
-          height: 46,
+          width: 80,
+          height: 80,
           borderRadius: 12,
           objectFit: "cover",
           border: "1px solid rgba(255,255,255,0.12)",
@@ -67,9 +65,17 @@ export function CollectionRow({
         }}
       />
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-        {/* ROW 1: Name (left) + badges (right), same line */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      {/* Content column takes all remaining width */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        {/* Line 1: Name (left) + Labels (right), same line */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            minWidth: 0
+          }}
+        >
           <div
             style={{
               flex: 1,
@@ -85,19 +91,19 @@ export function CollectionRow({
             {collection.name}
           </div>
 
-          {/* Badges: right-justified */}
-          <div style={{ flex: "0 0 auto", display: "flex", gap: 6, justifyContent: "flex-end" }}>
+          {/* Labels are right-justified by living at the end of the flex row */}
+          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flex: "0 0 auto" }}>
             {collection.highlight ? (
               <span
                 style={{
                   fontSize: 10.5,
                   fontWeight: 900,
                   color: "#8ab4ff",
-                  border: "1px solid rgba(138,180,255,0.75)",
-                  background: "rgba(138,180,255,0.10)",
-                  padding: "2px 7px",
+                  border: "1px solid rgba(138,180,255,0.55)",
+                  padding: "2px 6px",
                   borderRadius: 999,
-                  animation: "featuredPulseGlow 0.85s infinite"
+                  animation: "featuredPulseGlow 3s infinite",
+                  whiteSpace: "nowrap"
                 }}
                 title="New"
               >
@@ -107,48 +113,19 @@ export function CollectionRow({
           </div>
         </div>
 
-        {/* ROW 2: creators/network (left) + buttons (right), buttons side-by-side */}
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.25, color: "rgba(255,255,255,0.72)", minWidth: 0 }}>
-              <RichText text={collection.creators.join(" ")} onHandleClick={onHandleClick} />
-            </div>
-            <div style={{ marginTop: 4, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
-              {collection.network}
-            </div>
-          </div>
+        {/* Line 2: creators */}
+        <div style={{ marginTop: 3, fontSize: 12.25, color: "rgba(255,255,255,0.72)", minWidth: 0 }}>
+          <RichText text={collection.creators.join(" ")} onHandleClick={onHandleClick} />
+        </div>
 
-          <div
-            style={{
-              flex: "0 0 auto",
-              display: "flex",
-              gap: 8,
-              justifyContent: "flex-end",
-              alignItems: "center",
-              whiteSpace: "nowrap"
-            }}
-          >
-            {/* Miniapp first (primary), OpenSea second (secondary) */}
-            {showPrimary ? (
-              <button
-                type="button"
-                onClick={() => onOpenPrimary(collection)}
-                style={{
-                  borderRadius: 12,
-                  border: "1px solid rgba(138,180,255,0.45)",
-                  background: "rgba(138,180,255,0.16)",
-                  color: "rgba(255,255,255,0.95)",
-                  padding: "10px 12px",
-                  fontWeight: 950,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap"
-                }}
-                title={primaryUrl ?? undefined}
-              >
-                {primaryLabel}
-              </button>
-            ) : null}
+        {/* Line 3: network */}
+        <div style={{ marginTop: 4, fontSize: 11.5, color: "rgba(255,255,255,0.55)", minWidth: 0 }}>
+          {collection.network}
+        </div>
 
+        {/* Line 4: buttons, right-justified, side-by-side, below creators/network */}
+        {(showPrimary || showSecondary) ? (
+          <div style={{ marginTop: 10, display: "flex", gap: 8, justifyContent: "flex-end" }}>
             {showSecondary ? (
               <button
                 type="button"
@@ -161,15 +138,37 @@ export function CollectionRow({
                   padding: "10px 10px",
                   fontWeight: 850,
                   cursor: "pointer",
-                  whiteSpace: "nowrap"
+                  whiteSpace: "nowrap",
+                  flexShrink: 0
                 }}
                 title={secondaryUrl ?? undefined}
               >
                 {resolvedSecondaryLabel}
               </button>
             ) : null}
+
+            {showPrimary ? (
+              <button
+                type="button"
+                onClick={() => onOpenPrimary(collection)}
+                style={{
+                  borderRadius: 12,
+                  border: "1px solid rgba(138,180,255,0.45)",
+                  background: "rgba(138,180,255,0.16)",
+                  color: "rgba(255,255,255,0.95)",
+                  padding: "10px 12px",
+                  fontWeight: 950,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0
+                }}
+                title={primaryUrl ?? undefined}
+              >
+                {primaryLabel}
+              </button>
+            ) : null}
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   )

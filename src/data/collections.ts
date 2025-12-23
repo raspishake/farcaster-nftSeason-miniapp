@@ -50,7 +50,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@madyak"],
     miniapp: "https://farcaster.xyz/miniapps/2vgEwTqkDV2n/dickpunks-waitlist",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/dickpunks.png"
   },
 
   "the-apostles": {
@@ -59,7 +59,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@jesus"],
     miniapp: "https://farcaster.xyz/miniapps/meHZ3K2366qc/the-apostles",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/the-apostles.png"
   },
 
   petlets: {
@@ -69,7 +69,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://www.harmonybot.xyz/share/petlets/254221",
     opensea: "https://opensea.io/collection/petlets",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/petlets.png"
   },
 
   protardio: {
@@ -79,7 +79,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://farcaster.xyz/miniapps/MqVtma_28MiI/protardio",
     opensea: "https://opensea.io/collection/protardio-citizens",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/protardio.png"
   },
 
   "frosty-friends": {
@@ -89,7 +89,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://farcaster.xyz/miniapps/38mV7ok9eAKi/frosty-friends",
     opensea: "https://opensea.io/collection/frosty-friends-677973055",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/frosty-friends.png"
   },
 
   waifu: {
@@ -99,7 +99,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://farcaster.xyz/miniapps/_NawZqxwVR8H/waifu",
     opensea: "https://opensea.io/collection/base-waifus",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/waifu.png"
   },
 
   "pixel-noun": {
@@ -110,7 +110,7 @@ export const collectionsById: Record<string, Collection> = {
     opensea: "https://explorer.degen.tips/token/0x6fB0F96Bb2dCD32388eBBB6b13608928Ed538218",
     network: "Degen",
     secondaryActionLabelOverride: { opensea: "View" },
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/pixel-noun.png"
   },
 
   "paint-people": {
@@ -119,7 +119,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@iamtaylor"],
     miniapp: "http://paintpeople.vercel.app/",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/paint-people.png"
   },
 
   "not-punks": {
@@ -128,7 +128,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@pratiksharma.eth"],
     miniapp: "https://farcaster.xyz/miniapps/lvNNJ5A8VRiK/not-punks",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/not-punks.png"
   },
 
   mogpunks: {
@@ -138,7 +138,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://mogpunks-mint.vercel.app/",
     opensea: "https://opensea.io/collection/mogpunks",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/mogpunks.png"
   },
 
   "farpixel-cats": {
@@ -148,7 +148,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://farcaster.xyz/miniapps/dU0eSxtWRBvf/farpixel",
     opensea: "https://opensea.io/collection/farpixelcats",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/farpixel-cats.png"
   },
 
   "tiny-turtles": {
@@ -158,7 +158,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp:"https://immutagen.ai/mint/c1244fe2-7b40-43c4-871f-c8ed4c13ab83?generationId=6838adb0-e66e-4229-8350-91b518b46efd",
     opensea: "https://opensea.io/collection/the-tiny-turtles",    
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/tiny-turtles.png"
   },
 
   howlers: {
@@ -168,7 +168,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://farcaster.xyz/miniapps/yBlGKitosGjY/howlers",
     opensea: "https://opensea.io/collection/howlers-on-base",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/howlers.png"
   },
 
   // “You missed the Boat” / OpenSea only
@@ -178,7 +178,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@sayangel"],
     opensea: "https://opensea.io/collection/the-warplets-farcaster",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/warplets.png"
   },
 
   waifulets: {
@@ -187,7 +187,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@eggman.eth"],
     opensea: "https://opensea.io/collection/waifulets",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/waifulets.png"
   },
 
   sheeplet: {
@@ -197,7 +197,7 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://thesheeplets.gobase.wtf/",
     opensea: "https://opensea.io/item/base/0x756325fb738cf88197997cf6e5fc1bfb18963dcd/584",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/sheeplet.png"
   },
 
   cloakies: {
@@ -206,7 +206,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@blainemalone"],
     opensea: "https://opensea.io/collection/cloakies-collection",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/cloakies.png"
   },
 
   "base-punks": {
@@ -215,7 +215,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@gmonchain.eth"],
     opensea: "https://opensea.io/collection/basepunkz-on-base",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/base-punks.png"
   },
 
   "fid-punks": {
@@ -224,7 +224,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@streetphoto"],
     opensea: "https://opensea.io/collection/fidpunks",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/fid-punks.png"
   },
 
   "world-computer": {
@@ -233,7 +233,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@Unknown"],
     opensea: "https://opensea.io/collection/worldcomputerclub",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/world-computer.png"
   },
 
   "cryptoadickbutts": {
@@ -242,7 +242,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@Unknown"],
     opensea: "https://opensea.io/collection/cryptoadickbuttz",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/cryptoadickbutts.png"
   },
 
   "farcaster-interns": {
@@ -251,7 +251,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@Unknown"],
     opensea: "https://opensea.io/collection/farcaster-interns-3",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/farcaster-interns.png"
   },
 
   "x402-toadz": {
@@ -260,7 +260,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@maxbuidl.eth"],
     opensea: "https://opensea.io/collection/x402_toadz-club-base",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/x402-toadz.png"
   },
 
   "farcaster-pro-og": {
@@ -287,7 +287,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@recessdotfun"],
     miniapp: "https://farcaster.xyz/miniapps/sqYk09wRm676/farape",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/farape-apes.png"
   },
 
   "fid-azuki": {
@@ -296,7 +296,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@ritukumari.eth"],
     opensea: "https://opensea.io/collection/fidazuki",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/fid-azuki.png"
   },
 
   "warplet-mfer": {
@@ -305,7 +305,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://farcaster.xyz/miniapps/XQktyvz1H9zn/warplet-mfers",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/warplet-mfer.png"
   },
 
   "warplet-nouns": {
@@ -314,7 +314,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://farcaster.xyz/miniapps/Pvs6xfVCnvqn/warplet-nouns",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/warplet-nouns.png"
   },
 
   "warplet-babies": {
@@ -323,7 +323,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://farcaster.xyz/miniapps/iyhggRrAsWJK/warplet-babies",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/warplet-babies.png"
   },
 
   "the-barcode": {
@@ -332,7 +332,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@thebarcode"],
     miniapp: "https://farcaster.xyz/miniapps/lGupNaXO2fv8/the-barcode",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/the-barcode.png"
   },
 
   "farcaster-constellation": {
@@ -341,7 +341,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@jesse7.eth"],
     miniapp: "https://farcaster.xyz/miniapps/1QWOndscTLyV/social-constellation-nft",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/farcaster-constellation.png"
   },
 
   "farcaster-dino": {
@@ -350,7 +350,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@0xsayan.eth"],
     miniapp: "https://farcaster.xyz/miniapps/Pjm_FOONcY1K/farcaster-dinos-mint",
     network: "Arbitrum",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/farcaster-dino.png"
   },
 
   arblets: {
@@ -359,7 +359,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@0xanas.eth"],
     miniapp: "https://farcaster.xyz/miniapps/IxzbMlpQLNCZ/the-arblets",
     network: "Arbitrum",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/arblets.png"
   },
 
   "based-build": {
@@ -370,7 +370,7 @@ export const collectionsById: Record<string, Collection> = {
     opensea: "https://opensea.io/collection/basedbuilds",
     network: "Base",
     highlight: true,
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/based-build.png"
   },
 
   sophlet: {
@@ -389,7 +389,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@markcarey"],
     miniapp: "https://warpletsweaters.frm.lol/warpletsweaters/minted/bafybeifsroay74hao3sctvjxfekvuvtmzhg6azofbbseawj2ixqmc7bzku",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/warplet-sweaters.png"
   },
 
   "wecastwarplets-49k-mint": {
@@ -398,7 +398,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@chriscocreated"],
     miniapp: "https://farcaster.xyz/miniapps/DLMNg-iBux-P/wecastwarplets-49k-mint",
     network: "Base",
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/wecastwarplets-49k-mint.png"
   },
 
   "warplet-mash-up": {
@@ -417,11 +417,10 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@horsefacts.eth"],
     miniapp: "https://farcaster.xyz/miniapps/B94B28OhXPTH/sweepzone",
     network: "Base",
-    highlight: true,
     primaryActionLabelOverride: {
 	miniapp: "Open"
     },
-    thumbnail: TMP_THUMB
+    thumbnail: "/thumbs/sweep.png"
   }
 }
 

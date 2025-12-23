@@ -8,6 +8,7 @@ type Props = {
   primaryLabel: string
   primaryUrl: string | null
 
+  // Optional second button (usually OpenSea)
   secondaryLabel?: string
   secondaryUrl: string | null
 
@@ -17,8 +18,7 @@ type Props = {
 }
 
 function looksLikeOpenSea(url: string): boolean {
-  const u = url.toLowerCase()
-  return u.includes("opensea.io") || u.includes("opensea")
+  return url.toLowerCase().includes("opensea.io")
 }
 
 export function FeaturedCard({
@@ -53,21 +53,21 @@ export function FeaturedCard({
       <img
         src={collection.thumbnail}
         alt={collection.name}
-        width={54}
-        height={54}
+        width={80}
+        height={80}
         style={{
-          width: 54,
-          height: 54,
-          borderRadius: 14,
+          width: 80,
+          height: 80,
+          borderRadius: 16,
           objectFit: "cover",
           border: "1px solid rgba(255,255,255,0.14)",
           flex: "0 0 auto"
         }}
       />
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-        {/* ROW 1: Name (left) + badges (right), same line */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Row 1: name left, badges hard-right */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minWidth: 0 }}>
           <div
             style={{
               flex: 1,
@@ -83,8 +83,17 @@ export function FeaturedCard({
             {collection.name}
           </div>
 
-          {/* Badges: right-justified */}
-          <div style={{ flex: "0 0 auto", display: "flex", gap: 6, justifyContent: "flex-end" }}>
+          <div
+            style={{
+              marginLeft: "auto",
+              flex: "0 0 auto",
+              display: "flex",
+              gap: 6,
+              justifyContent: "flex-end",
+              alignItems: "center",
+              whiteSpace: "nowrap"
+            }}
+          >
             <span
               style={{
                 fontSize: 10.5,
@@ -94,7 +103,8 @@ export function FeaturedCard({
                 background: "rgba(138,180,255,0.12)",
                 padding: "2px 7px",
                 borderRadius: 999,
-                animation: "featuredPulseGlow 0.85s infinite"
+                animation: "featuredPulseGlow 3s infinite",
+                whiteSpace: "nowrap"
               }}
               title="Featured"
             >
@@ -111,7 +121,8 @@ export function FeaturedCard({
                   background: "rgba(138,180,255,0.10)",
                   padding: "2px 7px",
                   borderRadius: 999,
-                  animation: "featuredPulseGlow 0.85s infinite"
+                  animation: "featuredPulseGlow 3s infinite",
+                  whiteSpace: "nowrap"
                 }}
                 title="New"
               >
@@ -121,19 +132,18 @@ export function FeaturedCard({
           </div>
         </div>
 
-        {/* ROW 2: creators/network (left) + buttons (right), buttons side-by-side */}
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+        {/* Row 2: meta left, buttons hard-right, side-by-side */}
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginTop: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12.75, color: "rgba(255,255,255,0.78)" }}>
               <RichText text={collection.creators.join(" ")} onHandleClick={onHandleClick} />
             </div>
-            <div style={{ marginTop: 4, fontSize: 11.75, color: "rgba(255,255,255,0.60)" }}>
-              {collection.network}
-            </div>
+            <div style={{ marginTop: 4, fontSize: 11.75, color: "rgba(255,255,255,0.60)" }}>{collection.network}</div>
           </div>
 
           <div
             style={{
+              marginLeft: "auto",
               flex: "0 0 auto",
               display: "flex",
               gap: 8,
@@ -142,7 +152,6 @@ export function FeaturedCard({
               whiteSpace: "nowrap"
             }}
           >
-            {/* Miniapp first (primary), OpenSea second (secondary) */}
             {showPrimary ? (
               <button
                 type="button"
@@ -184,7 +193,6 @@ export function FeaturedCard({
             ) : null}
           </div>
         </div>
-
       </div>
     </div>
   )

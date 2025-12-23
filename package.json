@@ -9,6 +9,8 @@
     "prebuild": "npm run validate:data",
     "validate:data": "tsx scripts/validate-data.ts",
     "lint": "biome check src",
+    "thumbs": "tsx scripts/generate-thumbnails.ts",
+    "thumbs:force": "tsx scripts/generate-thumbnails.ts --force",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,6 +25,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.2.1",
     "@wagmi/cli": "latest",
+    "sharp": "^0.34.5",
     "tsx": "^4.21.0",
     "typescript": "^5.4.5",
     "vite": "^5.2.11"
