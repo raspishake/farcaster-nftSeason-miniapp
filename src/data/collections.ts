@@ -418,6 +418,24 @@ export const collectionsById: Record<string, Collection> = {
     thumbnail: "/thumbs/wordlets.png"
   },
 
+  "probots": {
+    id: "probots",
+    name: "Probots",
+    creators: ["@procoin"],
+    opensea: "https://opensea.io/collection/probots",
+    network: "Base",
+    thumbnail: "/thumbs/probots.png"
+  },
+
+  "okcomputers": {
+    id: "okcomputers",
+    name: "OK Computers",
+    creators: ["@Unkonwn"],
+    opensea: "https://opensea.io/collection/okcomputers",
+    network: "Base",
+    thumbnail: "/thumbs/okcomputers.png"
+  },
+
   "sweep": {
     id: "sweep",
     name: "sweep.zone",
@@ -515,6 +533,8 @@ export const groups: Group[] = [
       "cryptoadickbutts",
       "farcaster-interns",
       "x402-toadz",
+      "probots",
+      "okcomputers",
       "og-nft",
       "farcaster-pro-og"
     ]
@@ -559,14 +579,13 @@ export const groups: Group[] = [
     ]
   },
 
-  {
-    title: "OG Collections",
-    description: "NFTs that launched on Farcaster before the Farcaster Pro OG NFTs in June, 2025",
-    featuredId: "cryptoadickbutts",
-    itemIds: [
-      "farcaster-interns",
-    ]
-  },
+//  {
+//    title: "OG Collections",
+//    description: "NFTs that launched on Farcaster before the Farcaster Pro OG NFTs in June, 2025",
+//    featuredId: "",
+//    itemIds: [
+//    ]
+//  },
 
   {
     title: "Other Cool Miniapps",

@@ -1,5 +1,4 @@
 maintenance:
-- add older collections
 - Update README:
  here is the latest version of the readme- see attached
  update it
