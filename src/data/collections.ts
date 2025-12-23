@@ -57,8 +57,10 @@ export const collectionsById: Record<string, Collection> = {
     id: "the-apostles",
     name: "The Apostles",
     creators: ["@jesus"],
-    miniapp: "https://farcaster.xyz/miniapps/meHZ3K2366qc/the-apostles",
+ //   miniapp: "https://farcaster.xyz/miniapps/meHZ3K2366qc/the-apostles",
+    miniapp: "https://farcaster.xyz/miniapps/y3JyVxonCq_o/the-apostles",
     network: "Base",
+    highlight: true,
     thumbnail: "/thumbs/the-apostles.png"
   },
 
@@ -455,10 +457,10 @@ export const groups: Group[] = [
   {
     title: "Christmas Mints",
     description: "Some mints to celebrate the holidays",
-    featuredId: "warplet-sweaters",
+    featuredId: "the-apostles",
     itemIds: [
      "frosty-friends",
-     "the-apostles",
+     "warplet-sweaters"
     ]
   },
 
@@ -473,9 +475,8 @@ export const groups: Group[] = [
   {
     title: "Be Early",
     description: "The following allowlists are open",
-    featuredId: "the-apostles",
+    featuredId: "dickpunks",
     itemIds: [
-      "dickpunks",
     ]
   },
 
@@ -490,6 +491,7 @@ export const groups: Group[] = [
       "sophlet",
       "based-build",
       "warplet-mash-up",
+      "the-apostles",
       "warplet-sweaters"
     ]
   },
