@@ -65,9 +65,10 @@ export function FeaturedCard({
         }}
       />
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Row 1: name left, badges hard-right */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minWidth: 0 }}>
+      {/* Content column */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        {/* Line 1: Name (left) + Labels (right), same line */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <div
             style={{
               flex: 1,
@@ -83,6 +84,7 @@ export function FeaturedCard({
             {collection.name}
           </div>
 
+          {/* Labels right-justified */}
           <div
             style={{
               marginLeft: "auto",
@@ -132,46 +134,19 @@ export function FeaturedCard({
           </div>
         </div>
 
-        {/* Row 2: meta left, buttons hard-right, side-by-side */}
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginTop: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.75, color: "rgba(255,255,255,0.78)" }}>
-              <RichText text={collection.creators.join(" ")} onHandleClick={onHandleClick} />
-            </div>
-            <div style={{ marginTop: 4, fontSize: 11.75, color: "rgba(255,255,255,0.60)" }}>{collection.network}</div>
-          </div>
+        {/* Line 2: creators */}
+        <div style={{ marginTop: 6, fontSize: 12.75, color: "rgba(255,255,255,0.78)", minWidth: 0 }}>
+          <RichText text={collection.creators.join(" ")} onHandleClick={onHandleClick} />
+        </div>
 
-          <div
-            style={{
-              marginLeft: "auto",
-              flex: "0 0 auto",
-              display: "flex",
-              gap: 8,
-              justifyContent: "flex-end",
-              alignItems: "center",
-              whiteSpace: "nowrap"
-            }}
-          >
-            {showPrimary ? (
-              <button
-                type="button"
-                onClick={() => onOpenPrimary(collection)}
-                style={{
-                  borderRadius: 12,
-                  border: "1px solid rgba(138,180,255,0.50)",
-                  background: "rgba(138,180,255,0.18)",
-                  color: "rgba(255,255,255,0.96)",
-                  padding: "10px 12px",
-                  fontWeight: 950,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap"
-                }}
-                title={primaryUrl ?? undefined}
-              >
-                {primaryLabel}
-              </button>
-            ) : null}
+        {/* Line 3: network */}
+        <div style={{ marginTop: 4, fontSize: 11.75, color: "rgba(255,255,255,0.60)", minWidth: 0 }}>
+          {collection.network}
+        </div>
 
+        {/* Line 4: buttons, right-justified, side-by-side, miniapp first then opensea (secondary) */}
+        {(showPrimary || showSecondary) ? (
+          <div style={{ marginTop: 10, display: "flex", gap: 8, justifyContent: "flex-end" }}>
             {showSecondary ? (
               <button
                 type="button"
@@ -184,15 +159,37 @@ export function FeaturedCard({
                   padding: "10px 10px",
                   fontWeight: 850,
                   cursor: "pointer",
-                  whiteSpace: "nowrap"
+                  whiteSpace: "nowrap",
+                  flexShrink: 0
                 }}
                 title={secondaryUrl ?? undefined}
               >
                 {resolvedSecondaryLabel}
               </button>
             ) : null}
+
+            {showPrimary ? (
+              <button
+                type="button"
+                onClick={() => onOpenPrimary(collection)}
+                style={{
+                  borderRadius: 12,
+                  border: "1px solid rgba(138,180,255,0.50)",
+                  background: "rgba(138,180,255,0.18)",
+                  color: "rgba(255,255,255,0.96)",
+                  padding: "10px 12px",
+                  fontWeight: 950,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0
+                }}
+                title={primaryUrl ?? undefined}
+              >
+                {primaryLabel}
+              </button>
+            ) : null}
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   )
