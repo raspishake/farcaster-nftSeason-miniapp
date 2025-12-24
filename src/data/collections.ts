@@ -267,7 +267,7 @@ export const collectionsById: Record<string, Collection> = {
   "farcaster-pro-og": {
     id: "farcaster-pro-og",
     name: "Farcaster Pro OGs",
-    creators: ["@miguelgarest"],
+    creators: ["@miguelgarest.eth"],
     opensea: "https://opensea.io/collection/farcaster-pro-og",
     network: "Base",
     thumbnail: "/thumbs/pro.png"
@@ -439,7 +439,7 @@ export const collectionsById: Record<string, Collection> = {
   "uniko": {
     id: "uniko",
     name: "Unikō",
-    creators: ["@miguelgarest"],
+    creators: ["@miguelgarest.eth"],
     opensea: "https://opensea.io/collection/uniko-by-miguelgarest",
     network: "Base",
     thumbnail: "/thumbs/uniko.png"
