@@ -474,7 +474,7 @@ export const collectionsById: Record<string, Collection> = {
 // Groups reference collections by ID, no duplication.
 export const groups: Group[] = [
   {
-    title: "Christmas Mints",
+    title: "XMAS",
     description: "Some mints to celebrate the holidays",
     featuredId: "the-apostles",
     itemIds: [
