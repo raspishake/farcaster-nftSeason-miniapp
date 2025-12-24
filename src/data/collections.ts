@@ -436,6 +436,15 @@ export const collectionsById: Record<string, Collection> = {
     thumbnail: "/thumbs/okcomputers.png"
   },
 
+  "uniko": {
+    id: "uniko",
+    name: "Unikō",
+    creators: ["@miguelgarest"],
+    opensea: "https://opensea.io/collection/uniko-by-miguelgarest",
+    network: "Base",
+    thumbnail: "/thumbs/uniko.png"
+  },
+
   "sweep": {
     id: "sweep",
     name: "sweep.zone",
@@ -446,6 +455,18 @@ export const collectionsById: Record<string, Collection> = {
 	miniapp: "Open"
     },
     thumbnail: "/thumbs/sweep.png"
+  },
+
+  "immutagen": {
+    id: "immutagen",
+    name: "immutagen",
+    creators: ["@mfbevan.eth"],
+    miniapp: "https://farcaster.xyz/miniapps/77Z7J_ZHttit/immutagen",
+    network: "Base",
+    primaryActionLabelOverride: {
+	miniapp: "Open"
+    },
+    thumbnail: "/thumbs/immutagen.png"
   }
 }
 
@@ -510,6 +531,7 @@ export const groups: Group[] = [
     featuredId: "warplets",
     itemIds: [
       "waifulets",
+      "uniko",
       "cloakies",
       "base-punks",
       "fid-punks",
@@ -546,6 +568,7 @@ export const groups: Group[] = [
     description: "Some other cool miniapps related to Farcaster NFTs collection curation",
     featuredId: "sweep",
     itemIds: [
+      "immutagen"
     ]
   }
 ]
