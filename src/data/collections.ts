@@ -59,6 +59,7 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@jesus"],
  //   miniapp: "https://farcaster.xyz/miniapps/meHZ3K2366qc/the-apostles",
     miniapp: "https://farcaster.xyz/miniapps/y3JyVxonCq_o/the-apostles",
+    opensea: "https://opensea.io/collection/the-apostles-929464319",
     network: "Base",
     highlight: true,
     thumbnail: "/thumbs/the-apostles.png"
