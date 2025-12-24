@@ -340,7 +340,7 @@ export default function App() {
             one-stop-shop for new and ongoing mints in the space.
           </div>
           <div style={{ marginTop: 8 }}>
-            <RichText text="What are we missing? Tag @raspishake with your NFT mint miniapp." onHandleClick={onHandleClick} />
+            <RichText text="Want to see your FC NFT collection featured here? DM @raspishake." onHandleClick={onHandleClick} />
           </div>
           <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>{readyCalled ? "" : "Loading..."}</div>
         </div>
