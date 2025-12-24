@@ -369,7 +369,6 @@ export const collectionsById: Record<string, Collection> = {
     miniapp: "https://basedbuilds.xyz/share?token=3&tx=0x0c33ab7d327ee94e28b1714a174fe097cdd251ee222d13799da23e559636c1b6",
     opensea: "https://opensea.io/collection/basedbuilds",
     network: "Base",
-    highlight: true,
     thumbnail: "/thumbs/based-build.png"
   },
 
@@ -407,7 +406,6 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@alec.eth"],
     miniapp: "https://warplet-mashup.vercel.app/mashup/1766299224302-doo0vrdt3?participants=sayangel%2Clevertz&image=https%3A%2F%2Fcoral-sophisticated-albatross-902.mypinata.cloud%2Fipfs%2FQmNWvYmsSZMXrqt2iz36v7sWbKatNzzhZm3rgzSGqTU5E2",
     network: "Base",
-    highlight: true,
     thumbnail: "/thumbs/warplet-mash-up.png"
   },
 
@@ -465,24 +463,17 @@ export const groups: Group[] = [
   },
 
   {
-    title: "The Alpha",
-    description: "No allowlist (yet)- mints incoming. Check in again for updates",
-    featuredId: "fid-mfers",
-    itemIds: [
-    ]
-  },
-
-  {
-    title: "Be Early",
-    description: "The following allowlists are open",
+    title: "Alpha",
+    description: "Mints incoming. Check in again for updates",
     featuredId: "dickpunks",
     itemIds: [
+     "fid-mfers"
     ]
   },
 
   {
-    title: "New Launches",
-    description: "Time to click buttons. The following limited edition mints are Live.",
+    title: "Live",
+    description: "Time to click buttons. The following limited and open edition mints are live.",
     featuredId: "protardio",
     itemIds: [
       "petlets",
@@ -492,15 +483,8 @@ export const groups: Group[] = [
       "based-build",
       "warplet-mash-up",
       "the-apostles",
-      "warplet-sweaters"
-    ]
-  },
-
-  {
-    title: "Ongoing mints",
-    description: "Projects you can just keep smashing mint button on.",
-    featuredId: "pixel-noun",
-    itemIds: [
+      "warplet-sweaters",
+      "pixel-noun",
       "paint-people",
       "warplet-mfer",
       "warplet-nouns",
@@ -521,7 +505,7 @@ export const groups: Group[] = [
   },
 
   {
-    title: "You missed the Boat",
+    title: "Ended",
     description: "You are late. Mint has ended. Head to OpenSea and click there.",
     featuredId: "warplets",
     itemIds: [
@@ -543,27 +527,6 @@ export const groups: Group[] = [
   },
 
   {
-    title: "FID-NFTs",
-    description: "NFTs tied to your Farcaster ID (FID)",
-    featuredId: "warplets",
-    itemIds: [
-      "arblets",
-      "fid-punks",
-      "warplet-mfer",
-      "fid-azuki",
-      "farape-apes",
-      "farcaster-dino",
-      "warplet-nouns",
-      "warplet-babies",
-      "warplet-sweaters",
-      "howlers",
-      "petlets",
-      "sophlet",
-      "tiny-turtles"
-    ]
-  },
-
-  {
     title: "Warplet-ification",
     description: "NFTs that are derivatives of your Warplet(s)",
     featuredId: "petlets",
@@ -573,21 +536,10 @@ export const groups: Group[] = [
       "warplet-nouns",
       "warplet-babies",
       "warplet-sweaters",
-      "arblets",
-      "wecastwarplets-49k-mint",
       "warplet-mash-up",
       "wordlets",
-      "sheeplet"
     ]
   },
-
-//  {
-//    title: "OG Collections",
-//    description: "NFTs that launched on Farcaster before the Farcaster Pro OG NFTs in June, 2025",
-//    featuredId: "",
-//    itemIds: [
-//    ]
-//  },
 
   {
     title: "Other Cool Miniapps",
