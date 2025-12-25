@@ -48,9 +48,11 @@ export const collectionsById: Record<string, Collection> = {
     id: "dickpunks",
     name: "DickPunks",
     creators: ["@madyak"],
-    miniapp: "https://farcaster.xyz/miniapps/2vgEwTqkDV2n/dickpunks-waitlist",
+    miniapp: "https://farcaster.xyz/miniapps/2vgEwTqkDV2n/crytpodickpunks-mint",
+    opensea: "https://opensea.io/collection/cryptodickpunks-421264534",
     network: "Base",
-    thumbnail: "/thumbs/dickpunks.png"
+    highlight: true,
+    thumbnail: "/thumbs/dickpunkslive.png"
   },
 
   "the-apostles": {
@@ -378,6 +380,7 @@ export const collectionsById: Record<string, Collection> = {
     name: "Sophlets",
     creators: ["@chriscocreated"],
     miniapp: "https://immutagen.ai/mint/d964d9a2-6707-4b3e-98a5-c505ae0d04d1?generationId=978c332b-aa9d-42c0-b8d0-7c044ca023a9",
+    opensea: "https://opensea.io/collection/sophlets",
     network: "Base",
     highlight: true,
     thumbnail: "/thumbs/sophlets.png"
@@ -397,6 +400,7 @@ export const collectionsById: Record<string, Collection> = {
     name: "WeCast Warplets",
     creators: ["@chriscocreated"],
     miniapp: "https://farcaster.xyz/miniapps/DLMNg-iBux-P/wecastwarplets-49k-mint",
+    opensea: "https://opensea.io/assets/base/0x71423af9132f5d33001dac560ab943ad4a503a66/7",
     network: "Base",
     thumbnail: "/thumbs/wecast.png"
   },
@@ -487,18 +491,18 @@ export const groups: Group[] = [
   {
     title: "Alpha",
     description: "Mints incoming. Check in again for updates",
-    featuredId: "dickpunks",
+    featuredId: "fid-mfers",
     itemIds: [
-     "fid-mfers"
     ]
   },
 
   {
     title: "Live",
     description: "Time to click buttons. The following limited and open edition mints are live.",
-    featuredId: "protardio",
+    featuredId: "dickpunks",
     itemIds: [
       "petlets",
+      "protardio",
       "frosty-friends",
       "waifu",
       "sophlet",
