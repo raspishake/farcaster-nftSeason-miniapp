@@ -12,8 +12,3 @@ next Up:
 - make it so date is updated on deploy and not manually
 - Add: "Support Developer" see tmp/tipExample.jpeg for example
 
-
-Check for:
-- miniapp shows up in miniapp search: https://miniapps.farcaster.xyz/docs/guides/discovery
-
-

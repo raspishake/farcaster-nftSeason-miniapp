@@ -1,6 +1,6 @@
 // src/data/collections.ts
 
-export type Network = "Base" | "Arbitrum" | "Degen" | "Ethereum"
+export type Network = "Base" | "Arbitrum" | "Degen" | "Ethereum" | "Celo"
 
 // shared override type
 export type ActionLabelOverride = {
@@ -123,6 +123,7 @@ export const collectionsById: Record<string, Collection> = {
     name: "Paint People",
     creators: ["@iamtaylor"],
     miniapp: "http://paintpeople.vercel.app/",
+    opensea: "https://opensea.io/collection/biggerpaintpeople",
     network: "Base",
     thumbnail: "/thumbs/paint-people.png"
   },
@@ -334,6 +335,7 @@ export const collectionsById: Record<string, Collection> = {
     name: "The Barcode",
     creators: ["@thebarcode"],
     miniapp: "https://farcaster.xyz/miniapps/lGupNaXO2fv8/the-barcode",
+    opensea: "https://opensea.io/collection/the-barcode-farcaster",
     network: "Base",
     thumbnail: "/thumbs/barcode.png"
   },
@@ -360,7 +362,8 @@ export const collectionsById: Record<string, Collection> = {
     id: "arblets",
     name: "Arblets",
     creators: ["@0xanas.eth"],
-    miniapp: "https://farcaster.xyz/miniapps/IxzbMlpQLNCZ/the-arblets",
+//    miniapp: "https://farcaster.xyz/miniapps/IxzbMlpQLNCZ/the-arblets",
+    opensea: "https://opensea.io/collection/the-arblets",
     network: "Arbitrum",
     thumbnail: "/thumbs/arblets.png"
   },
@@ -460,6 +463,19 @@ export const collectionsById: Record<string, Collection> = {
 	miniapp: "Open"
     },
     thumbnail: "/thumbs/sweep.png"
+
+  },
+
+  "rock": {
+    id: "rock",
+    name: "x402 Rocks",
+    creators: ["@x402rocks"],
+    miniapp: "https://farcaster.xyz/miniapps/AqmkuW0oc7Fk/x402rocks-mint-live",
+    network: "Celo",
+    primaryActionLabelOverride: {
+	miniapp: "Miniapp"
+    },
+    thumbnail: "/thumbs/rocks.png"
   },
 
   "immutagen": {
@@ -546,6 +562,7 @@ export const groups: Group[] = [
       "cryptoadickbutts",
       "farcaster-interns",
       "x402-toadz",
+      "rock",
       "probots",
       "okcomputers",
       "og-nft",

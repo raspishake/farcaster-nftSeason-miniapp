@@ -105,5 +105,4 @@ info "OK, deployed: $ALIAS_URL"
 info "Manifest: $ALIAS_URL/.well-known/farcaster.json"
 
 # Finish deploy by refreshing miniapp on Farcaster using Farcaster Manifests Tool
-echo -e '\nNow open this link and hit "Refresh" to finish deployment:\nhttps://farcaster.xyz/~/developers/mini-apps/manifest?domain=nft-season.vercel.app\n'
-
+echo -e '\n✅✅✅ Now open this link and hit "Refresh" to finish deployment:\nhttps://farcaster.xyz/~/developers/mini-apps/manifest?domain=nft-season.vercel.app\n'

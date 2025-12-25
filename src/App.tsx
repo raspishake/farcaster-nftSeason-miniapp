@@ -60,24 +60,22 @@ function collectionSecondaryUrl(c: Collection, groupTitle: string): string | nul
 function primarySourceFor(c: Collection, primaryUrl: string | null): LinkSource {
   const p = normUrl(primaryUrl)
   if (!p) return "miniapp"
-  if (p && normUrl(c.miniapp) && p === normUrl(c.miniapp)) return "miniapp"
-  if (p && normUrl(c.opensea) && p === normUrl(c.opensea)) return "opensea"
-  // fallback
+  if (normUrl(c.miniapp) && p === normUrl(c.miniapp)) return "miniapp"
+  if (normUrl(c.opensea) && p === normUrl(c.opensea)) return "opensea"
   return "miniapp"
 }
 
 function secondarySourceFor(c: Collection, secondaryUrl: string | null): LinkSource {
   const s = normUrl(secondaryUrl)
   if (!s) return "opensea"
-  if (s && normUrl(c.opensea) && s === normUrl(c.opensea)) return "opensea"
-  if (s && normUrl(c.miniapp) && s === normUrl(c.miniapp)) return "miniapp"
-  // fallback, secondary in this app is intended to be the "opensea" field
+  if (normUrl(c.opensea) && s === normUrl(c.opensea)) return "opensea"
+  if (normUrl(c.miniapp) && s === normUrl(c.miniapp)) return "miniapp"
   return "opensea"
 }
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>(groups[0]?.title ?? "NFTs")
-  const [query, setQuery] = useState("")
+  // const [query, setQuery] = useState("")
   const [readyCalled, setReadyCalled] = useState(false)
 
   const fidCacheRef = useRef<Map<string, number>>(new Map())
@@ -115,17 +113,34 @@ export default function App() {
     return list
   }, [activeGroup])
 
-  const filteredItems = useMemo(() => {
-    const q = query.trim().toLowerCase()
+  // Search version (currently disabled)
+  //
+  // const filteredItems = useMemo(() => {
+  //   const q = query.trim().toLowerCase()
+  //
+  //   const base = resolvedItems
+  //     .filter((c: Collection) => c.id !== activeGroup.featuredId)
+  //     .filter((c: Collection) => {
+  //       if (!q) return true
+  //       const creators = c.creators.join(" ")
+  //       const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
+  //       return hay.includes(q)
+  //     })
+  //
+  //   // ORDER: featured first (handled separately), NEW second, then alphabetical
+  //   base.sort((a: Collection, b: Collection) => {
+  //     const aNew = Boolean(a.highlight)
+  //     const bNew = Boolean(b.highlight)
+  //     if (aNew !== bNew) return aNew ? -1 : 1
+  //     return a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  //   })
+  //
+  //   return base
+  // }, [resolvedItems, query, activeGroup.featuredId])
 
-    const base = resolvedItems
-      .filter((c: Collection) => c.id !== activeGroup.featuredId)
-      .filter((c: Collection) => {
-        if (!q) return true
-        const creators = c.creators.join(" ")
-        const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
-        return hay.includes(q)
-      })
+  // No-search version (active)
+  const filteredItems: Collection[] = useMemo(() => {
+    const base = resolvedItems.filter((c: Collection) => c.id !== activeGroup.featuredId)
 
     // ORDER: featured first (handled separately), NEW second, then alphabetical
     base.sort((a: Collection, b: Collection) => {
@@ -136,7 +151,7 @@ export default function App() {
     })
 
     return base
-  }, [resolvedItems, query, activeGroup.featuredId])
+  }, [resolvedItems, activeGroup.featuredId])
 
   async function onOpenPrimary(c: Collection): Promise<void> {
     const url = collectionPrimaryUrl(c, activeGroup.title)
@@ -159,8 +174,7 @@ export default function App() {
   const featuredPrimarySource: LinkSource = featured ? primarySourceFor(featured, featuredPrimaryUrl) : "miniapp"
   const featuredSecondarySource: LinkSource = featured ? secondarySourceFor(featured, featuredSecondaryUrl) : "opensea"
 
-  const featuredPrimaryLabel =
-    featured ? primaryLabelForCollection(featured, activeGroup.title, featuredPrimarySource) : ""
+  const featuredPrimaryLabel = featured ? primaryLabelForCollection(featured, activeGroup.title, featuredPrimarySource) : ""
   const featuredSecondaryLabel = featured ? secondaryLabelForCollection(featured, featuredSecondarySource) : ""
 
   return (
@@ -202,7 +216,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
             <div>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
-              <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>Updated Dec 24, 2037</div>
+              <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>Updated Dec 25, 2037</div>
             </div>
 
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
@@ -250,7 +264,8 @@ export default function App() {
 
           <Tabs groups={groups} activeTitle={activeTab} onSelect={setActiveTab} />
 
-          {/* Search */}
+          {/* Search (commented out intentionally) */}
+          {/* 
           <div style={{ marginTop: 12 }}>
             <input
               value={query}
@@ -269,6 +284,7 @@ export default function App() {
               }}
             />
           </div>
+          */}
         </div>
 
         {/* Body */}
@@ -342,7 +358,9 @@ export default function App() {
           <div style={{ marginTop: 8 }}>
             <RichText text="Want to see your FC NFT collection featured here? DM @raspishake." onHandleClick={onHandleClick} />
           </div>
-          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>{readyCalled ? "" : "Loading..."}</div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
+            {readyCalled ? "" : "Loading..."}
+          </div>
         </div>
       </div>
     </div>
