@@ -280,7 +280,8 @@ export const collectionsById: Record<string, Collection> = {
   "og-nft": {
     id: "og-nft",
     name: "OG NFTs",
-    creators: ["@Unknown"],
+    creators: ["@primenode.eth"], //previously @satoushi
+    miniapp: "https://nft-factory.kasra.codes/mint/gRP3zv10_Q", 
     network: "Base",
     thumbnail: "/thumbs/og.png"
   },
@@ -472,9 +473,6 @@ export const collectionsById: Record<string, Collection> = {
     creators: ["@x402rocks"],
     miniapp: "https://farcaster.xyz/miniapps/AqmkuW0oc7Fk/x402rocks-mint-live",
     network: "Celo",
-    primaryActionLabelOverride: {
-	miniapp: "Miniapp"
-    },
     thumbnail: "/thumbs/rocks.png"
   },
 
@@ -532,23 +530,13 @@ export const groups: Group[] = [
       "warplet-nouns",
       "warplet-babies",
       "farcaster-constellation",
-      "farcaster-dino",
-      "not-punks",
-      "mogpunks",
-      "farpixel-cats",
-      "tiny-turtles",
-      "the-barcode",
-      "farape-apes",
-      "sheeplet",
-      "wordlets",
-      "wecastwarplets-49k-mint",
-      "howlers"
+      "wordlets"
     ]
   },
 
   {
-    title: "Ended",
-    description: "You are late. Mint has ended. Head to OpenSea and click there.",
+    title: "Legacy",
+    description: "Mint has ended (or just lost momentum and never minted out).",
     featuredId: "warplets",
     itemIds: [
       "waifulets",
@@ -566,6 +554,16 @@ export const groups: Group[] = [
       "probots",
       "okcomputers",
       "og-nft",
+      "farcaster-dino",
+      "not-punks",
+      "mogpunks",
+      "farpixel-cats",
+      "tiny-turtles",
+      "the-barcode",
+      "farape-apes",
+      "sheeplet",
+      "wecastwarplets-49k-mint",
+      "howlers",
       "farcaster-pro-og"
     ]
   },
@@ -581,7 +579,7 @@ export const groups: Group[] = [
       "warplet-babies",
       "warplet-sweaters",
       "warplet-mash-up",
-      "wordlets",
+      "wordlets"
     ]
   },
 
