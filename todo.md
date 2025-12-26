@@ -1,5 +1,5 @@
 maintenance:
-- add quality check to ensure no collection is repeated in any group
+
 - Update README:
  here is the latest version of the readme- see attached
  update it
@@ -9,8 +9,10 @@ maintenance:
 
 
 next Up:
-- web-based ui to add new collections/ groups/ modify them in any and all ways
-- notifications when new collection added or mint opens: https://miniapps.farcaster.xyz/docs/guides/notifications
 - make it so date is updated on deploy and not manually
+- add quality check to ensure no collection is repeated in any group
+- web-based ui to add new collections/ groups/ modify them in any and all ways
+
+- notifications when new collection added or mint opens: https://miniapps.farcaster.xyz/docs/guides/notifications
 - Add: "Support Developer" see tmp/tipExample.jpeg for example
 

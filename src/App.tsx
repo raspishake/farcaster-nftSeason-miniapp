@@ -8,6 +8,7 @@ import { RichText } from "./components/RichText"
 import { Tabs } from "./components/Tabs"
 import { FeaturedCard } from "./components/FeaturedCard"
 import { CollectionRow } from "./components/CollectionRow"
+import { BUILD_DATE } from "./buildInfo"
 
 type TabKey = string
 type LinkSource = "miniapp" | "opensea"
@@ -216,8 +217,10 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
             <div>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
-              <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>Updated Dec 26, 2037</div>
-            </div>
+	      <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>
+                Updated {BUILD_DATE}
+              </div>
+              </div>
 
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
               <div style={{ fontWeight: 800 }}>

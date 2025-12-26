@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "write:buildinfo": "tsx scripts/write-build-info.ts",
+    "prebuild": "npm run write:buildinfo && npm run validate:data",
     "build": "tsc && vite build",
-    "prebuild": "npm run validate:data",
     "validate:data": "tsx scripts/validate-data.ts",
     "lint": "biome check src",
     "resize": "tsx scripts/resizethumbnails.ts",

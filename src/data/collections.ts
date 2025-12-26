@@ -244,7 +244,7 @@ export const collectionsById: Record<string, Collection> = {
   "cryptoadickbutts": {
     id: "cryptoadickbutts",
     name: "CryptoaDickButts",
-    creators: ["@Unknown"],
+    creators: ["@madyak"],
     opensea: "https://opensea.io/collection/cryptoadickbuttz",
     network: "Base",
     thumbnail: "/thumbs/cryptoadickbutts.png"
