@@ -1,0 +1,877 @@
+// scripts/editor-server.ts
+import express from "express"
+import { existsSync, writeFileSync } from "fs"
+import { resolve } from "path"
+import { spawn } from "child_process"
+import { serializeCollectionsTs, type CollectionsState } from "./collections-serializer"
+
+const app = express()
+app.use(express.json({ limit: "10mb" }))
+
+const HOST = process.env.EDITOR_HOST ?? "127.0.0.1"
+const PORT = Number(process.env.EDITOR_PORT ?? "8787")
+
+// Security controls:
+// - Default: require token.
+// - Optional: disable token ONLY when bound to 127.0.0.1, and enforce strict Origin/Referer checks.
+const TOKEN = (process.env.EDITOR_TOKEN ?? "").trim()
+const NO_TOKEN = (process.env.EDITOR_NO_TOKEN ?? "").trim() === "1"
+
+function requireLocalOnly(req: express.Request, res: express.Response): boolean {
+  if (HOST !== "127.0.0.1" && HOST !== "localhost") {
+    res.status(500).json({ error: "Refusing to run editor unless bound to 127.0.0.1 or localhost." })
+    return false
+  }
+  return true
+}
+
+function requireOrigin(req: express.Request, res: express.Response): boolean {
+  // This is a CSRF mitigation for local services.
+  // We only allow requests coming from this same origin.
+  const expected = `http://${HOST}:${PORT}`
+  const origin = (req.header("origin") ?? "").trim()
+  const referer = (req.header("referer") ?? "").trim()
+
+  // Allow no-origin for curl-like clients if they have the token; if NO_TOKEN, we require origin/referer.
+  if (NO_TOKEN) {
+    const ok = origin === expected || referer.startsWith(expected)
+    if (!ok) {
+      res.status(403).json({ error: "Forbidden: origin/referer check failed." })
+      return false
+    }
+  }
+  return true
+}
+
+function requireToken(req: express.Request, res: express.Response): boolean {
+  if (!requireLocalOnly(req, res)) return false
+  if (!requireOrigin(req, res)) return false
+
+  if (NO_TOKEN) return true
+
+  if (!TOKEN) {
+    res.status(500).json({ error: "EDITOR_TOKEN is not set. Set it or set EDITOR_NO_TOKEN=1 (local only)." })
+    return false
+  }
+  const got = (req.header("x-editor-token") ?? "").trim()
+  if (!got || got !== TOKEN) {
+    res.status(401).json({ error: "Unauthorized" })
+    return false
+  }
+  return true
+}
+
+const repoRoot = process.cwd()
+const collectionsPath = resolve(repoRoot, "src/data/collections.ts")
+const deployPath = resolve(repoRoot, "deploy.sh")
+
+type RunResult = { ok: boolean; code: number | null; output: string }
+
+function runCmd(cmd: string, args: string[], opts?: { cwd?: string }): Promise<RunResult> {
+  return new Promise(resolvePromise => {
+    const child = spawn(cmd, args, {
+      cwd: opts?.cwd ?? repoRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env
+    })
+
+    let out = ""
+    child.stdout.on("data", d => (out += d.toString("utf8")))
+    child.stderr.on("data", d => (out += d.toString("utf8")))
+
+    child.on("close", code => resolvePromise({ ok: code === 0, code, output: out }))
+  })
+}
+
+async function loadStateFromModule(): Promise<CollectionsState> {
+  if (!existsSync(collectionsPath)) throw new Error(`Missing: ${collectionsPath}`)
+
+  const mod = await import(resolve(repoRoot, "src/data/collections.ts") + `?t=${Date.now()}`)
+
+  const collectionsById = mod.collectionsById as CollectionsState["collectionsById"]
+  const groups = mod.groups as CollectionsState["groups"]
+
+  if (!collectionsById || typeof collectionsById !== "object") throw new Error("collectionsById missing or invalid export")
+  if (!Array.isArray(groups)) throw new Error("groups missing or invalid export")
+
+  return { collectionsById, groups }
+}
+
+function validateStateLight(state: CollectionsState): string[] {
+  const errors: string[] = []
+
+  const ids = Object.keys(state.collectionsById)
+  const idSet = new Set(ids)
+
+  for (const id of ids) {
+    const c = state.collectionsById[id]
+    if (!c) errors.push(`Collection "${id}" is null/undefined.`)
+    if (c.id !== id) errors.push(`Collection key "${id}" mismatch with c.id "${c.id}".`)
+    if (!c.name?.trim()) errors.push(`Collection "${id}" missing name.`)
+    if (!Array.isArray(c.creators) || c.creators.length === 0) errors.push(`Collection "${id}" missing creators.`)
+    if (!c.thumbnail?.trim()) errors.push(`Collection "${id}" missing thumbnail.`)
+    if (!c.network) errors.push(`Collection "${id}" missing network.`)
+  }
+
+  for (const g of state.groups) {
+    if (!g.title?.trim()) errors.push(`A group is missing title.`)
+    if (!g.description?.trim()) errors.push(`Group "${g.title}" missing description.`)
+
+    const seen = new Set<string>()
+    const dupes: string[] = []
+    for (const id of g.itemIds ?? []) {
+      if (seen.has(id)) dupes.push(id)
+      seen.add(id)
+    }
+    if (dupes.length) errors.push(`Group "${g.title}" has duplicate itemIds: ${[...new Set(dupes)].join(", ")}.`)
+
+    if (g.featuredId) {
+      if (!idSet.has(g.featuredId)) errors.push(`Group "${g.title}" featuredId "${g.featuredId}" does not exist.`)
+      if ((g.itemIds ?? []).includes(g.featuredId)) errors.push(`Group "${g.title}" featuredId is also in itemIds.`)
+    } else {
+      errors.push(`Group "${g.title}" missing featuredId.`)
+    }
+
+    for (const id of g.itemIds ?? []) {
+      if (!idSet.has(id)) errors.push(`Group "${g.title}" references unknown collection id "${id}".`)
+    }
+  }
+
+  return errors
+}
+
+app.get("/", (_req, res) => {
+  res.setHeader("content-type", "text/html; charset=utf-8")
+  res.send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NFT Season Editor</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system; background: #0b0f14; color: rgba(255,255,255,0.92); }
+    header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.10); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 14px; font-weight: 900; }
+    .wrap { padding: 14px 16px; display: grid; grid-template-columns: 360px 1fr; gap: 12px; align-items: start; }
+    @media (max-width: 980px) { .wrap { grid-template-columns: 1fr; } }
+
+    .card { border: 1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.18); border-radius: 14px; padding: 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .col { display: flex; flex-direction: column; gap: 8px; }
+    .small { font-size: 12px; color: rgba(255,255,255,0.65); }
+    .title { font-size: 12px; font-weight: 900; color: rgba(255,255,255,0.85); }
+    .hr { height: 1px; background: rgba(255,255,255,0.10); margin: 10px 0; }
+
+    input, textarea, select, button {
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      padding: 10px 12px;
+      font-weight: 750;
+      font-size: 13px;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+
+    /* Fix “blank until hovered” select/option rendering */
+    select { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.92); }
+    option { background: #0b0f14; color: rgba(255,255,255,0.92); }
+
+    button { cursor: pointer; }
+    button.primary { border: 1px solid rgba(138,180,255,0.55); background: rgba(138,180,255,0.16); }
+    button.danger { border: 1px solid rgba(255,120,120,0.55); background: rgba(255,120,120,0.14); }
+    button.ghost { background: transparent; border: 1px solid rgba(255,255,255,0.12); }
+
+    .list { display: flex; flex-direction: column; gap: 8px; }
+    .item { display: flex; justify-content: space-between; gap: 8px; align-items: center; border-radius: 12px; padding: 10px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); }
+    .item strong { font-size: 13px; }
+    .item .meta { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+    .pill { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); color: rgba(255,255,255,0.75); }
+    .pill.new { border-color: rgba(138,180,255,0.5); color: rgba(138,180,255,0.95); }
+
+    pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12.5px; }
+
+    .split { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+    @media (max-width: 980px) { .split { grid-template-columns: 1fr; } }
+
+    /* Pinned editor layout */
+    .splitCollections { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+    @media (max-width: 980px) { .splitCollections { grid-template-columns: 1fr; } }
+
+    .scrollPane {
+      max-height: calc(100vh - 190px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+    @media (max-width: 980px) { .scrollPane { max-height: unset; } }
+
+    .stickyEditor {
+      position: sticky;
+      top: 12px;
+      align-self: start;
+    }
+    @media (max-width: 980px) { .stickyEditor { position: static; } }
+
+    .kbar { display:flex; gap:8px; flex-wrap:wrap; }
+    .mutedBox { border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03); border-radius: 12px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NFT Season Editor (local)</h1>
+    <span class="small">Collections + Groups editor, generates src/data/collections.ts, runs validate + deploy</span>
+  </header>
+
+  <div class="wrap">
+    <div class="card col">
+      <div class="title">Session</div>
+      <div class="row">
+        <input id="token" placeholder="${NO_TOKEN ? "No token mode" : "EDITOR_TOKEN"}" autocomplete="off" style="width: 260px; max-width:100%;" ${NO_TOKEN ? "disabled" : ""} />
+        <button class="primary" id="load">Load</button>
+        <button class="primary" id="save">Save</button>
+      </div>
+
+      <div class="kbar">
+        <button id="validate">Validate</button>
+        <button class="danger" id="deploy">Deploy</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="title">View</div>
+      <div class="row">
+        <button class="ghost" id="tabCollections">Collections</button>
+        <button class="ghost" id="tabGroups">Groups</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="title">Search</div>
+      <input id="search" placeholder="Filter by name, id, @handle" />
+
+      <div class="hr"></div>
+
+      <div class="title">Logs</div>
+      <pre id="logs" style="max-height: 34vh; overflow:auto;"></pre>
+
+      <div class="hr"></div>
+      <div class="small">
+        ${NO_TOKEN ? "Security: NO_TOKEN mode enabled (Origin-checked, local only)." : "Security: token required (recommended)."}
+      </div>
+    </div>
+
+    <div class="card" id="main"></div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id)
+  const logs = $("logs")
+  const main = $("main")
+  const tokenInput = $("token")
+  const searchInput = $("search")
+
+  let state = null
+  let activeTab = "collections"
+  let selectedCollectionId = null
+  let selectedGroupIndex = null
+
+  const NO_TOKEN = ${NO_TOKEN ? "true" : "false"}
+
+  function log(msg) {
+    logs.textContent += msg + "\\n"
+    logs.scrollTop = logs.scrollHeight
+  }
+
+  async function api(path, opts = {}) {
+    const headers = {
+      "content-type": "application/json",
+      ...(opts.headers || {})
+    }
+    if (!NO_TOKEN) {
+      const token = tokenInput.value.trim()
+      if (!token) throw new Error("Set EDITOR_TOKEN first.")
+      headers["x-editor-token"] = token
+    }
+
+    const res = await fetch(path, { ...opts, headers })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(body.error || ("HTTP " + res.status))
+    return body
+  }
+
+  function deepCopy(x) { return JSON.parse(JSON.stringify(x)) }
+  function sortIds(ids) { return [...ids].sort((a,b)=>a.localeCompare(b, undefined, { sensitivity: "base" })) }
+
+  function getCollectionsList() {
+    const q = searchInput.value.trim().toLowerCase()
+    const ids = sortIds(Object.keys(state.collectionsById))
+    if (!q) return ids
+    return ids.filter(id => {
+      const c = state.collectionsById[id]
+      const hay = [id, c.name || "", ...(c.creators || [])].join(" ").toLowerCase()
+      return hay.includes(q)
+    })
+  }
+
+  function render() {
+    if (!state) {
+      main.innerHTML = '<div class="small">Load data to begin.</div>'
+      return
+    }
+    if (activeTab === "collections") renderCollections()
+    else renderGroups()
+  }
+
+  // ---------- Collections ----------
+  function renderCollections() {
+    const ids = getCollectionsList()
+    if (!selectedCollectionId && ids.length) selectedCollectionId = ids[0]
+    if (selectedCollectionId && !state.collectionsById[selectedCollectionId] && ids.length) selectedCollectionId = ids[0]
+
+    const listHtml = ids.map(id => {
+      const c = state.collectionsById[id]
+      const isSel = id === selectedCollectionId
+      const pills = []
+      if (c.highlight) pills.push('<span class="pill new">NEW</span>')
+      pills.push('<span class="pill">' + (c.network || "Network?") + '</span>')
+      return \`
+        <div class="item" style="\${isSel ? 'border-color: rgba(138,180,255,0.45); background: rgba(138,180,255,0.08);' : ''}">
+          <div style="min-width:0; flex:1;">
+            <strong title="\${id}">\${c.name || "(unnamed)"} </strong>
+            \${pills.join(" ")}
+            <div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">\${id} · \${(c.creators||[]).join(" ")}</div>
+          </div>
+          <div class="row">
+            <button class="ghost" onclick="window.__selCollection('\${id}')">Edit</button>
+            <button class="danger" onclick="window.__delCollection('\${id}')">Del</button>
+          </div>
+        </div>
+      \`
+    }).join("")
+
+    const c = state.collectionsById[selectedCollectionId] || null
+
+    main.innerHTML = \`
+      <div class="splitCollections">
+        <div class="col">
+          <div class="row" style="justify-content:space-between;">
+            <div class="title">Collections (\${ids.length})</div>
+            <button class="primary" onclick="window.__newCollection()">+ New</button>
+          </div>
+          <div class="scrollPane">
+            <div class="list">\${listHtml || '<div class="small">No collections.</div>'}</div>
+          </div>
+        </div>
+
+        <div class="col stickyEditor">
+          <div class="title">Edit Collection</div>
+          \${c ? window.__collectionFormHtml(c) : '<div class="small">Select a collection.</div>'}
+        </div>
+      </div>
+    \`
+  }
+
+  window.__collectionFormHtml = (c) => {
+    const netOpts = ["Base","Arbitrum","Degen","Ethereum","Celo"].map(n => \`<option value="\${n}" \${c.network===n?"selected":""}>\${n}</option>\`).join("")
+    const creators = (c.creators || []).join(", ")
+    const pMini = c.primaryActionLabelOverride?.miniapp || ""
+    const pSea = c.primaryActionLabelOverride?.opensea || ""
+    const sMini = c.secondaryActionLabelOverride?.miniapp || ""
+    const sSea = c.secondaryActionLabelOverride?.opensea || ""
+
+    return \`
+      <div class="col">
+        <div class="row"><div class="small">id</div><input id="c_id" value="\${c.id||""}" style="flex:1;" /></div>
+        <div class="row"><div class="small">name</div><input id="c_name" value="\${c.name||""}" style="flex:1;" /></div>
+        <div class="row"><div class="small">creators</div><input id="c_creators" value="\${creators}" style="flex:1;" placeholder="@a, @b" /></div>
+        <div class="row"><div class="small">miniapp</div><input id="c_miniapp" value="\${c.miniapp||""}" style="flex:1;" /></div>
+        <div class="row"><div class="small">opensea</div><input id="c_opensea" value="\${c.opensea||""}" style="flex:1;" /></div>
+        <div class="row"><div class="small">network</div><select id="c_network" style="flex:1;">\${netOpts}</select></div>
+        <div class="row"><div class="small">thumbnail</div><input id="c_thumbnail" value="\${c.thumbnail||""}" style="flex:1;" placeholder="/thumbs/x.png" /></div>
+
+        <label class="row" style="gap:8px;">
+          <input id="c_highlight" type="checkbox" \${c.highlight ? "checked" : ""} />
+          <span class="small">highlight (NEW)</span>
+        </label>
+
+        <div class="hr"></div>
+        <div class="title">Label overrides</div>
+
+        <div class="small">Primary overrides</div>
+        <div class="row">
+          <input id="c_p_mini" value="\${pMini}" style="flex:1;" placeholder='primary miniapp label' />
+          <input id="c_p_sea" value="\${pSea}" style="flex:1;" placeholder='primary opensea label' />
+        </div>
+
+        <div class="small">Secondary overrides</div>
+        <div class="row">
+          <input id="c_s_mini" value="\${sMini}" style="flex:1;" placeholder='secondary miniapp label' />
+          <input id="c_s_sea" value="\${sSea}" style="flex:1;" placeholder='secondary opensea label' />
+        </div>
+
+        <div class="row">
+          <button class="primary" onclick="window.__saveCollection()">Apply changes</button>
+        </div>
+
+        <div class="small">Changing id will update references in groups automatically.</div>
+      </div>
+    \`
+  }
+
+  window.__saveCollection = () => {
+    const oldId = selectedCollectionId
+    const id = $("c_id").value.trim()
+    const name = $("c_name").value.trim()
+    const creators = $("c_creators").value.split(",").map(s=>s.trim()).filter(Boolean)
+    const miniapp = $("c_miniapp").value.trim()
+    const opensea = $("c_opensea").value.trim()
+    const network = $("c_network").value
+    const thumbnail = $("c_thumbnail").value.trim()
+    const highlight = $("c_highlight").checked
+
+    const pMini = $("c_p_mini").value.trim()
+    const pSea = $("c_p_sea").value.trim()
+    const sMini = $("c_s_mini").value.trim()
+    const sSea = $("c_s_sea").value.trim()
+
+    if (!id) return alert("id required")
+    if (!name) return alert("name required")
+    if (!creators.length) return alert("creators required")
+    if (!thumbnail) return alert("thumbnail required")
+    if (oldId !== id && state.collectionsById[id]) return alert("id already exists")
+
+    const newC = {
+      id,
+      name,
+      creators,
+      network,
+      thumbnail,
+      ...(miniapp ? { miniapp } : {}),
+      ...(opensea ? { opensea } : {}),
+      ...(highlight ? { highlight: true } : {}),
+      ...((pMini||pSea) ? { primaryActionLabelOverride: { ...(pMini?{miniapp:pMini}:{}) , ...(pSea?{opensea:pSea}:{}) } } : {}),
+      ...((sMini||sSea) ? { secondaryActionLabelOverride: { ...(sMini?{miniapp:sMini}:{}) , ...(sSea?{opensea:sSea}:{}) } } : {})
+    }
+
+    if (oldId !== id) {
+      delete state.collectionsById[oldId]
+      state.groups.forEach(g => {
+        if (g.featuredId === oldId) g.featuredId = id
+        g.itemIds = (g.itemIds||[]).map(x => x === oldId ? id : x)
+      })
+      selectedCollectionId = id
+    }
+
+    state.collectionsById[id] = newC
+    render()
+  }
+
+  window.__newCollection = () => {
+    const base = "new-collection"
+    let i = 1
+    let id = base
+    while (state.collectionsById[id]) { i++; id = base + "-" + i }
+    state.collectionsById[id] = {
+      id,
+      name: "New Collection",
+      creators: ["@creator"],
+      network: "Base",
+      thumbnail: "/thumbs/tmp.png"
+    }
+    selectedCollectionId = id
+    render()
+  }
+
+  window.__delCollection = (id) => {
+    const usedIn = state.groups.filter(g => g.featuredId === id || (g.itemIds||[]).includes(id)).map(g => g.title)
+    if (usedIn.length) return alert("Cannot delete. Used in groups: " + usedIn.join(", "))
+    if (!confirm("Delete " + id + "?")) return
+    delete state.collectionsById[id]
+    if (selectedCollectionId === id) selectedCollectionId = null
+    render()
+  }
+
+  window.__selCollection = (id) => { selectedCollectionId = id; render() }
+
+  // ---------- Groups ----------
+  function renderGroups() {
+    const q = searchInput.value.trim().toLowerCase()
+    let groupIdxs = state.groups.map((_, i) => i)
+    if (q) {
+      groupIdxs = groupIdxs.filter(i => {
+        const g = state.groups[i]
+        const hay = (g.title + " " + g.description + " " + (g.itemIds||[]).join(" ")).toLowerCase()
+        return hay.includes(q)
+      })
+    }
+
+    if (selectedGroupIndex === null && groupIdxs.length) selectedGroupIndex = groupIdxs[0]
+    if (selectedGroupIndex !== null && !state.groups[selectedGroupIndex] && groupIdxs.length) selectedGroupIndex = groupIdxs[0]
+
+    const listHtml = groupIdxs.map(i => {
+      const g = state.groups[i]
+      const isSel = i === selectedGroupIndex
+      return \`
+        <div class="item" style="\${isSel ? 'border-color: rgba(138,180,255,0.45); background: rgba(138,180,255,0.08);' : ''}">
+          <div style="min-width:0; flex:1;">
+            <strong>\${g.title || "(untitled)"} </strong>
+            <span class="pill">\${(g.itemIds||[]).length} items</span>
+            <div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">\${g.description || ""}</div>
+          </div>
+          <div class="row">
+            <button class="ghost" title="Move up" onclick="window.__moveGroup(\${i}, -1)">↑</button>
+            <button class="ghost" title="Move down" onclick="window.__moveGroup(\${i}, 1)">↓</button>
+            <button class="ghost" onclick="window.__selGroup(\${i})">Edit</button>
+            <button class="danger" onclick="window.__delGroup(\${i})">Del</button>
+          </div>
+        </div>
+      \`
+    }).join("")
+
+    const g = selectedGroupIndex !== null ? state.groups[selectedGroupIndex] : null
+
+    main.innerHTML = \`
+      <div class="split">
+        <div class="col">
+          <div class="row" style="justify-content:space-between;">
+            <div class="title">Groups (\${state.groups.length})</div>
+            <button class="primary" onclick="window.__newGroup()">+ New</button>
+          </div>
+          <div class="scrollPane">
+            <div class="list">\${listHtml || '<div class="small">No groups.</div>'}</div>
+          </div>
+        </div>
+
+        <div class="col stickyEditor">
+          <div class="title">Edit Group</div>
+          \${g ? window.__groupFormHtml(g, selectedGroupIndex) : '<div class="small">Select a group.</div>'}
+        </div>
+      </div>
+    \`
+  }
+
+  window.__moveGroup = (idx, dir) => {
+    const j = idx + dir
+    if (j < 0 || j >= state.groups.length) return
+    const tmp = state.groups[idx]
+    state.groups[idx] = state.groups[j]
+    state.groups[j] = tmp
+    selectedGroupIndex = j
+    render()
+  }
+
+  window.__groupFormHtml = (g, idx) => {
+    const allIds = sortIds(Object.keys(state.collectionsById))
+    const featuredOptions = allIds.map(id => {
+      const c = state.collectionsById[id]
+      return \`<option value="\${id}" \${g.featuredId===id?"selected":""}>\${c.name} (\${id})</option>\`
+    }).join("")
+
+    const selected = new Set(g.itemIds || [])
+    const featuredId = g.featuredId || ""
+
+    const selectedList = (g.itemIds || []).map((id, i) => {
+      const c = state.collectionsById[id]
+      const name = c ? c.name : id
+      return \`
+        <div class="item" style="padding:8px;">
+          <div style="min-width:0; flex:1;">
+            <strong style="font-size:12.5px;">\${name}</strong>
+            <div class="meta">\${id}</div>
+          </div>
+          <div class="row">
+            <button class="ghost" title="Up" onclick="window.__moveGroupItem(\${idx}, \${i}, -1)">↑</button>
+            <button class="ghost" title="Down" onclick="window.__moveGroupItem(\${idx}, \${i}, 1)">↓</button>
+            <button class="danger" title="Remove" onclick="window.__removeGroupItem(\${idx}, '\${id}')">Remove</button>
+          </div>
+        </div>
+      \`
+    }).join("")
+
+    // Available list will be rendered by JS using search input
+    return \`
+      <div class="col">
+        <div class="row"><div class="small">title</div><input id="g_title" value="\${g.title||""}" style="flex:1;" /></div>
+
+        <div class="col">
+          <div class="small">description</div>
+          <textarea id="g_desc">\${g.description||""}</textarea>
+        </div>
+
+        <div class="row"><div class="small">featured</div><select id="g_featured" style="flex:1;">\${featuredOptions}</select></div>
+
+        <div class="hr"></div>
+        <div class="title">Items</div>
+
+        <div class="mutedBox">
+          <div class="small" style="margin-bottom:8px;">Selected items (order here is what you’ll see in the editor, app sorts at runtime)</div>
+          <div class="col" id="g_selected_list">\${selectedList || '<div class="small">No items yet.</div>'}</div>
+        </div>
+
+        <div class="mutedBox">
+          <div class="small" style="margin-bottom:8px;">Add items</div>
+          <input id="g_add_search" placeholder="Search collections to add..." />
+          <div class="col" id="g_add_list" style="margin-top:8px; max-height: 260px; overflow:auto;"></div>
+          <div class="small" style="margin-top:8px;">Featured is excluded automatically. Duplicates prevented.</div>
+        </div>
+
+        <div class="row">
+          <button class="primary" onclick="window.__saveGroup(\${idx})">Apply group meta (title/desc/featured)</button>
+        </div>
+      </div>
+    \`
+  }
+
+  function renderGroupAddList(idx) {
+    const g = state.groups[idx]
+    if (!g) return
+    const featuredId = $("g_featured")?.value || g.featuredId || ""
+    const q = ($("g_add_search")?.value || "").trim().toLowerCase()
+
+    const selected = new Set(g.itemIds || [])
+    const allIds = sortIds(Object.keys(state.collectionsById))
+
+    const candidates = allIds
+      .filter(id => id !== featuredId)
+      .filter(id => !selected.has(id))
+      .filter(id => {
+        if (!q) return true
+        const c = state.collectionsById[id]
+        const hay = [id, c?.name || "", ...(c?.creators || [])].join(" ").toLowerCase()
+        return hay.includes(q)
+      })
+      .slice(0, 80)
+
+    const html = candidates.map(id => {
+      const c = state.collectionsById[id]
+      return \`
+        <div class="item" style="padding:8px;">
+          <div style="min-width:0; flex:1;">
+            <strong style="font-size:12.5px;">\${c.name}</strong>
+            <div class="meta">\${id} · \${(c.creators||[]).join(" ")}</div>
+          </div>
+          <div class="row">
+            <button class="primary" onclick="window.__addGroupItem(\${idx}, '\${id}')">Add</button>
+          </div>
+        </div>
+      \`
+    }).join("")
+
+    const el = $("g_add_list")
+    if (el) el.innerHTML = html || '<div class="small">No matches.</div>'
+  }
+
+  window.__addGroupItem = (idx, id) => {
+    const g = state.groups[idx]
+    if (!g) return
+    const featuredId = $("g_featured")?.value || g.featuredId
+    if (id === featuredId) return alert("Cannot add featured to items")
+    const set = new Set(g.itemIds || [])
+    if (set.has(id)) return
+    g.itemIds = [...(g.itemIds || []), id]
+    render()
+    // After re-render, restore selection and update list
+    selectedGroupIndex = idx
+    setTimeout(() => {
+      const search = $("g_add_search")
+      if (search) search.value = ""
+      renderGroupAddList(idx)
+    }, 0)
+  }
+
+  window.__removeGroupItem = (idx, id) => {
+    const g = state.groups[idx]
+    if (!g) return
+    g.itemIds = (g.itemIds || []).filter(x => x !== id)
+    render()
+    selectedGroupIndex = idx
+    setTimeout(() => renderGroupAddList(idx), 0)
+  }
+
+  window.__moveGroupItem = (idx, i, dir) => {
+    const g = state.groups[idx]
+    if (!g) return
+    const arr = [...(g.itemIds || [])]
+    const j = i + dir
+    if (j < 0 || j >= arr.length) return
+    const tmp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = tmp
+    g.itemIds = arr
+    render()
+    selectedGroupIndex = idx
+    setTimeout(() => renderGroupAddList(idx), 0)
+  }
+
+  window.__saveGroup = (idx) => {
+    const g = state.groups[idx]
+    if (!g) return
+    const title = $("g_title").value.trim()
+    const description = $("g_desc").value.trim()
+    const featuredId = $("g_featured").value
+
+    if (!title) return alert("title required")
+    if (!description) return alert("description required")
+    if (!featuredId) return alert("featuredId required")
+
+    // Ensure featured not in items
+    g.itemIds = (g.itemIds || []).filter(id => id !== featuredId)
+
+    g.title = title
+    g.description = description
+    g.featuredId = featuredId
+
+    // Ensure uniqueness
+    g.itemIds = Array.from(new Set(g.itemIds || []))
+
+    render()
+    selectedGroupIndex = idx
+    setTimeout(() => renderGroupAddList(idx), 0)
+  }
+
+  window.__newGroup = () => {
+    const ids = sortIds(Object.keys(state.collectionsById))
+    state.groups.push({
+      title: "New Group",
+      description: "Describe this group.",
+      featuredId: ids[0] || undefined,
+      itemIds: []
+    })
+    selectedGroupIndex = state.groups.length - 1
+    render()
+    setTimeout(() => renderGroupAddList(selectedGroupIndex), 0)
+  }
+
+  window.__delGroup = (idx) => {
+    if (!confirm("Delete group?")) return
+    state.groups.splice(idx, 1)
+    selectedGroupIndex = null
+    render()
+  }
+
+  window.__selGroup = (idx) => {
+    selectedGroupIndex = idx
+    render()
+    setTimeout(() => {
+      renderGroupAddList(idx)
+      const s = $("g_add_search")
+      if (s) s.oninput = () => renderGroupAddList(idx)
+      const f = $("g_featured")
+      if (f) f.onchange = () => renderGroupAddList(idx)
+    }, 0)
+  }
+
+  // ---------- Global UI ----------
+  $("tabCollections").onclick = () => { activeTab = "collections"; render() }
+  $("tabGroups").onclick = () => { activeTab = "groups"; render() }
+  searchInput.oninput = () => render()
+
+  $("load").onclick = async () => {
+    logs.textContent = ""
+    try {
+      log("Loading from src/data/collections.ts ...")
+      const data = await api("/api/state/load")
+      state = deepCopy(data.state)
+      selectedCollectionId = null
+      selectedGroupIndex = null
+      log("Loaded.")
+      render()
+    } catch (e) {
+      log("ERROR: " + e.message)
+    }
+  }
+
+  $("save").onclick = async () => {
+    try {
+      log("Saving, generating collections.ts ...")
+      const r = await api("/api/state/save", { method: "POST", body: JSON.stringify({ state }) })
+      log(r.output || "Saved.")
+    } catch (e) {
+      log("ERROR: " + e.message)
+    }
+  }
+
+  $("validate").onclick = async () => {
+    try {
+      log("Running validate:data ...")
+      const r = await api("/api/run/validate", { method: "POST", body: JSON.stringify({}) })
+      log(r.output || "(no output)")
+      log(r.ok ? "Validate OK." : "Validate FAILED.")
+    } catch (e) {
+      log("ERROR: " + e.message)
+    }
+  }
+
+  $("deploy").onclick = async () => {
+    try {
+      log("Running deploy.sh ...")
+      const r = await api("/api/run/deploy", { method: "POST", body: JSON.stringify({}) })
+      log(r.output || "(no output)")
+      log(r.ok ? "Deploy OK." : "Deploy FAILED.")
+    } catch (e) {
+      log("ERROR: " + e.message)
+    }
+  }
+
+  render()
+</script>
+</body>
+</html>`)
+})
+
+app.get("/api/state/load", async (req, res) => {
+  if (!requireToken(req, res)) return
+  try {
+    const state = await loadStateFromModule()
+    res.json({ ok: true, state })
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "Failed to load state" })
+  }
+})
+
+app.post("/api/state/save", async (req, res) => {
+  if (!requireToken(req, res)) return
+  try {
+    const state = req.body?.state as CollectionsState
+    if (!state || typeof state !== "object") return res.status(400).json({ error: "Missing state" })
+
+    const errors = validateStateLight(state)
+    if (errors.length) return res.status(400).json({ error: errors.join("\n") })
+
+    const now = new Date()
+    const label = now.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" })
+
+    const ts = serializeCollectionsTs(state, label)
+    writeFileSync(collectionsPath, ts, "utf8")
+
+    res.json({ ok: true, output: `✓ Wrote ${collectionsPath}\n✓ Saved: ${label}` })
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "Failed to save" })
+  }
+})
+
+app.post("/api/run/validate", async (req, res) => {
+  if (!requireToken(req, res)) return
+  const r = await runCmd("npm", ["run", "validate:data"])
+  res.json(r)
+})
+
+app.post("/api/run/deploy", async (req, res) => {
+  if (!requireToken(req, res)) return
+  if (!existsSync(deployPath)) return res.status(404).json({ error: `Missing deploy script: ${deployPath}` })
+  const r = await runCmd("bash", [deployPath])
+  res.json(r)
+})
+
+app.listen(PORT, HOST, () => {
+  if (!NO_TOKEN && !TOKEN) {
+    console.error("EDITOR_TOKEN is not set. Set it or set EDITOR_NO_TOKEN=1 (local only).")
+    process.exit(1)
+  }
+  if (NO_TOKEN && (HOST !== "127.0.0.1" && HOST !== "localhost")) {
+    console.error("EDITOR_NO_TOKEN=1 requires EDITOR_HOST=127.0.0.1 (or localhost).")
+    process.exit(1)
+  }
+  console.log(`Editor running on http://${HOST}:${PORT}`)
+})

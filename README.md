@@ -15,6 +15,21 @@ All content is data-driven.
 
 ---
 
+## Dependencies
+
+### Core
+- Node.js + npm
+- Vite
+- TypeScript
+- React
+
+### Tooling used by this repo
+- `tsx`, runs TypeScript scripts directly (validation, editor, build info tasks)
+- `sharp`, image resizing for thumbnails
+- Vercel CLI (via `npx vercel`), deployment target
+
+---
+
 ## Development
 
 ### Install dependencies
@@ -28,9 +43,9 @@ npm install
 npm run dev
 ```
 
-Local app will be available at:
+Local app:
 
-```
+```text
 http://localhost:5173
 ```
 
@@ -44,10 +59,13 @@ npm run build
 
 This runs:
 
+* prebuild (write build info, then validate data)
 * TypeScript type checking
 * Vite production build
 
-Output is written to `dist/`.
+Output:
+
+* `dist/`
 
 ---
 
@@ -70,21 +88,21 @@ This will:
 
 ## Post-Deploy (Required)
 
-After **every production deploy**, you must refresh the Mini App manifest in Farcaster.
+After every production deploy, refresh the Mini App manifest in Farcaster.
 
 1. Open:
 
-```
+```text
 https://farcaster.xyz/~/developers/mini-apps/manifest?domain=nft-season.vercel.app
 ```
 
 2. Click **Refresh**
 
-This is required for Farcaster to re-read:
+This forces Farcaster to re-read:
 
 * `/.well-known/farcaster.json`
 * account association
-* icon / splash image
+* icon and splash image
 * metadata updates
 
 ---
@@ -93,7 +111,7 @@ This is required for Farcaster to re-read:
 
 The Mini App manifest lives at:
 
-```
+```text
 public/.well-known/farcaster.json
 ```
 
@@ -102,7 +120,7 @@ It is served statically by Vite from the `public` directory.
 Common edits:
 
 * `iconUrl` and `splashImageUrl`
-* app name / description
+* app name and description
 * developer metadata
 * tags
 
@@ -115,25 +133,86 @@ Static assets are served from `public/`.
 Important files:
 
 ```text
-public/thumbs/miniapp.png   # Mini App icon & splash
+public/thumbs/miniapp.png   # Mini App icon and splash
 public/thumbs/tmp.png       # Temporary collection thumbnails
 ```
 
 ---
 
+## Thumbnail Generation
+
+You will often manually download a collection image, then generate a correctly sized thumbnail.
+
+Command:
+
+```bash
+npm run resize /path_to_manually_downloaded_image/collectionImage.png collectionImage
+```
+
+This will generate one or more resized outputs (depending on the script) under:
+
+```text
+public/thumbs/
+```
+
+Notes:
+
+* Prefer square-ish source images.
+* Use a clean slug for the output name (`collectionImage` above).
+
+---
+
 ## Updating NFT Data (Most Important Section)
 
-All NFT data lives in **one file**:
+All NFT data lives in one file:
 
-```
+```text
 src/data/collections.ts
 ```
 
 This file is intentionally structured so:
 
-* NFT collections are defined **once**
-* Collections can appear in **multiple groups**
+* NFT collections are defined once
+* Collections can appear in multiple groups
 * No data is duplicated
+
+---
+
+## Web Editor (Recommended)
+
+You can manage `collections.ts` without editing TypeScript directly.
+
+The editor supports:
+
+* Create, update, delete collections
+* Create, update, delete groups
+* Reorder groups
+* Manage group items via search + add/remove, not multi-select pain
+* Save regenerates `src/data/collections.ts`
+* Run `validate:data`
+* Run `deploy.sh`
+
+### Run the editor
+
+Token mode (recommended):
+
+```bash
+export EDITOR_TOKEN="annoyingly-long-secret"
+npm run editor
+```
+
+No-token mode (local only, Origin-checked):
+
+```bash
+export EDITOR_NO_TOKEN=1
+npm run editor
+```
+
+Open:
+
+```text
+http://127.0.0.1:8787
+```
 
 ---
 
@@ -143,11 +222,11 @@ This file is intentionally structured so:
 
 Find the `collectionsById` object in:
 
-```
+```text
 src/data/collections.ts
 ```
 
-Add a new entry **once**:
+Add a new entry once:
 
 ```ts
 "example-nft": {
@@ -156,18 +235,17 @@ Add a new entry **once**:
   creators: ["@creatorhandle"],
   miniapp: "https://farcaster.xyz/miniapps/XXXXX/example",
   opensea: "https://opensea.io/collection/example",
-  network: "Base", // Base | Arbitrum | Ethereum
+  network: "Base", // Base | Arbitrum | Ethereum | Degen | Celo
   thumbnail: "/thumbs/tmp.png"
 }
 ```
 
 Notes:
 
-* `id` must be **unique** and URL-safe
+* `id` must be unique and URL-safe
 * `miniapp` is optional
 * `opensea` is optional
-* If only OpenSea exists, the button will correctly say **OpenSea**
-* Creator handles must include `@`
+* creator handles must include `@`
 
 ---
 
@@ -175,7 +253,7 @@ Notes:
 
 Scroll down to the `groups` array in the same file.
 
-Each group references collections by **ID only**.
+Each group references collections by ID only.
 
 Example:
 
@@ -183,8 +261,7 @@ Example:
 {
   title: "We are Live",
   description: "Time to click buttons. The following limited edition mints are Live.",
-  lastUpdated: "Dec 18, 2037",
-  featuredId: "example-nft", // optional
+  featuredId: "example-nft",
   itemIds: [
     "example-nft",
     "another-nft"
@@ -194,18 +271,16 @@ Example:
 
 You can:
 
-* Add the same collection ID to **multiple groups**
-* Feature it in **only one group** by setting `featuredId`
-* Omit `featuredId` entirely if nothing is featured
+* Add the same collection ID to multiple groups
+* Feature it in only one group by setting `featuredId`
 
 ---
 
-### Featured Rules (Important)
+## Featured Rules (Important)
 
-* `featuredId` is **group-specific**
+* `featuredId` is group-specific
 * A collection can appear in many groups
-* A collection should be featured in **at most one group**
-* Featured collections appear at the top and are **not duplicated** in the list
+* Featured collections should not also appear in `itemIds` for the same group
 
 ---
 
@@ -213,11 +288,9 @@ You can:
 
 Buttons are determined automatically:
 
-* If primary link is OpenSea → button says **OpenSea**
-* If group is **Be Early** → button says **Allow List**
-* Otherwise → **Mint**
-
-No manual labeling needed.
+* If primary link is OpenSea, button says **OpenSea**
+* If group is **Be Early**, button says **Allow List**
+* Otherwise, **Mint**
 
 Miniapp links attempt to open via:
 
@@ -263,8 +336,18 @@ meta tag to `index.html`:
 
 ---
 
+## Resources
+
+* [https://miniapps.farcaster.xyz/](https://miniapps.farcaster.xyz/)
+
+---
+
 Mini App created by **@raspishake**
 Raspberry Shake, S.A.
 [https://raspberryshake.org](https://raspberryshake.org)
 
+```
+
+:contentReference[oaicite:0]{index=0}
+::contentReference[oaicite:1]{index=1}
 ```

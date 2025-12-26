@@ -11,7 +11,8 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "lint": "biome check src",
     "resize": "tsx scripts/resizethumbnails.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "editor": "tsx scripts/editor-server.ts"
   },
   "dependencies": {
     "@farcaster/miniapp-sdk": "^0.2.1",
@@ -28,6 +29,7 @@
     "sharp": "^0.34.5",
     "tsx": "^4.21.0",
     "typescript": "^5.4.5",
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "express": "^4.19.2"
   }
 }

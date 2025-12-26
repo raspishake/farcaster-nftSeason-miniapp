@@ -361,6 +361,16 @@ export default function App() {
           <div style={{ marginTop: 8 }}>
             <RichText text="Want to see your FC NFT collection featured here? DM @raspishake." onHandleClick={onHandleClick} />
           </div>
+          <div style={{ marginTop: 8 }}>
+	    <strong>
+             <em>
+               <RichText
+                 text="Support the Developer: send an NFT to our Warplet. Ty"
+                 onHandleClick={onHandleClick}
+               />
+             </em>
+           </strong>
+          </div>
           <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
             {readyCalled ? "" : "Loading..."}
           </div>

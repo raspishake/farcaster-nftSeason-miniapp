@@ -26,8 +26,8 @@ for arg in "$@"; do
     -h|--help)
       cat <<'EOF'
 deploy.sh
-  ./deploy.sh            Deploy to production (vercel --prod)
-  ./deploy.sh --preview  Deploy as preview (vercel)
+  ./deploy.sh               Deploy to production (vercel --prod)
+  ./deploy.sh --preview     Deploy as preview (vercel)
   ./deploy.sh --skip-build  Skip typecheck/build step
 EOF
       exit 0
@@ -80,10 +80,19 @@ fi
 # Deploy
 if [[ "$MODE" == "prod" ]]; then
   info "Deploying to production (npx vercel --prod)..."
-  DEPLOY_OUT="$(npx vercel --prod 2>&1 | tee /dev/stderr)"
+  DEPLOY_OUT="$(npx vercel --prod 2>&1 || true)"
 else
   info "Deploying preview (npx vercel)..."
-  DEPLOY_OUT="$(npx vercel 2>&1 | tee /dev/stderr)"
+  DEPLOY_OUT="$(npx vercel 2>&1 || true)"
+fi
+
+# Print vercel output (works in TTY and non-TTY environments)
+printf '%s\n' "$DEPLOY_OUT"
+
+# Fail if vercel failed
+# (vercel sometimes prints useful output even when failing, so we printed first)
+if echo "$DEPLOY_OUT" | grep -qiE 'error|failed'; then
+  err "Vercel reported an error. See output above."
 fi
 
 # Extract alias URL if present
@@ -104,5 +113,4 @@ curl -fsS "$ALIAS_URL/.well-known/farcaster.json" >/dev/null \
 info "OK, deployed: $ALIAS_URL"
 info "Manifest: $ALIAS_URL/.well-known/farcaster.json"
 
-# Finish deploy by refreshing miniapp on Farcaster using Farcaster Manifests Tool
-echo -e '\n✅✅✅ Now open this link and hit "Refresh" to finish deployment:\nhttps://farcaster.xyz/~/developers/mini-apps/manifest?domain=nft-season.vercel.app\n'
+echo -e '\n✅ Now open this link and hit "Refresh" to finish deployment:\nhttps://farcaster.xyz/~/developers/mini-apps/manifest?domain=nft-season.vercel.app\n'
