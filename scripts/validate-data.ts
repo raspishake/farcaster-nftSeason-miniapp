@@ -23,6 +23,16 @@ function expectedOrder(groupItemIds: string[]): string[] {
   return [...newItems, ...rest].map(c => c.id)
 }
 
+function findDuplicates(ids: string[]): string[] {
+  const seen = new Set<string>()
+  const dupes = new Set<string>()
+  for (const id of ids) {
+    if (seen.has(id)) dupes.add(id)
+    else seen.add(id)
+  }
+  return [...dupes]
+}
+
 function main() {
   const issues: Issues = { errors: [], warnings: [] }
 
@@ -30,6 +40,16 @@ function main() {
   for (const id of Object.keys(collectionsById)) membershipCount.set(id, 0)
 
   for (const g of groups) {
+    const itemIds = g.itemIds ?? []
+
+    // Enforce: no duplicates within itemIds for this group
+    const dupes = findDuplicates(itemIds)
+    if (dupes.length) {
+      issues.errors.push(
+        `Group "${g.title}" contains duplicate itemIds: ${dupes.map(id => `"${id}" (${collectionName(id)})`).join(", ")}.`
+      )
+    }
+
     // Enforce exactly one featured per group (must be set and valid)
     if (!g.featuredId) {
       issues.errors.push(`Group "${g.title}" is missing featuredId (must have exactly one featured).`)
@@ -40,7 +60,7 @@ function main() {
     }
 
     // Validate itemIds references exist
-    for (const id of g.itemIds ?? []) {
+    for (const id of itemIds) {
       if (!collectionsById[id]) {
         issues.errors.push(`Group "${g.title}" references missing collection id "${id}".`)
       } else {
@@ -49,16 +69,15 @@ function main() {
     }
 
     // Featured must NOT also appear in list
-    if (g.featuredId && (g.itemIds ?? []).includes(g.featuredId)) {
+    if (g.featuredId && itemIds.includes(g.featuredId)) {
       issues.errors.push(`Group "${g.title}" includes featuredId "${g.featuredId}" inside itemIds. Remove it from itemIds.`)
     }
 
     // Warn if ordering is not: NEW first (excluding featured), then alphabetical
-    const ids = g.itemIds ?? []
-    const exp = expectedOrder(ids)
+    const exp = expectedOrder(itemIds)
 
     const normalize = (arr: string[]) => arr.filter(id => Boolean(collectionsById[id]))
-    const a = normalize(ids)
+    const a = normalize(itemIds)
     const b = normalize(exp)
 
     const same = a.length === b.length && a.every((id, i) => id === b[i])
