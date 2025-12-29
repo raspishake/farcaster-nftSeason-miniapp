@@ -362,7 +362,6 @@ If UI behavior touches notifications:
 
 #### Editor web GUI (the protected admin UI you run via `npm run editor`)
 * `scripts/editor-server.ts` (always)
-* `scripts/db-init.ts` (if DB schema changes are involved)
 
 #### Data validation, sorting, and build-time rules
 * `scripts/validate-data.ts`
