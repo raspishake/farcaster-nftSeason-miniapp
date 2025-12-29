@@ -1,52 +1,49 @@
 // api/farcaster/webhook.ts
-// Vercel Serverless Function (non-Next typed). Keep it boring and reliable.
-
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { Pool } from "pg";
+import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { Pool } from "pg"
+import crypto from "crypto"
 
 type WebhookBody = {
-  header: string;
-  payload: string;
-  signature?: string;
-};
+  header?: string
+  payload?: string
+  signature?: string
+}
 
-function b64urlToBuffer(input: string): Buffer {
-  // base64url -> base64
-  const pad = "=".repeat((4 - (input.length % 4)) % 4);
-  const b64 = (input + pad).replace(/-/g, "+").replace(/_/g, "/");
-  return Buffer.from(b64, "base64");
+type DecodedHeader = {
+  fid: number
+  type: string
+  key: string
+}
+
+type DecodedPayload =
+  | { event: "notifications_enabled"; notificationDetails?: { url?: string; token?: string } }
+  | { event: "notifications_disabled" }
+  | { event?: string; [k: string]: unknown }
+
+const APP_FID = Number.parseInt(process.env.FARCASTER_APP_FID || process.env.APP_FID || "372916", 10)
+
+function base64urlDecodeToString(b64url: string): string {
+  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/")
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4)
+  return Buffer.from(b64 + pad, "base64").toString("utf8")
 }
 
 function safeJsonParse<T>(s: string): T | null {
   try {
-    return JSON.parse(s) as T;
+    return JSON.parse(s) as T
   } catch {
-    return null;
+    return null
   }
 }
 
-function getDbUrl(): string {
-  const u = process.env.DATABASE_URL;
-  if (!u) throw new Error("Missing DATABASE_URL");
-  return u;
-}
-
-let pool: Pool | null = null;
 function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: getDbUrl(),
-      max: 2,
-      idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 5_000,
-      ssl: { rejectUnauthorized: false },
-    });
-  }
-  return pool;
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL
+  if (!url) throw new Error("Missing DATABASE_URL/POSTGRES_URL/NEON_DATABASE_URL")
+  return new Pool({ connectionString: url, max: 1 })
 }
 
-async function ensureTables(p: Pool): Promise<void> {
-  await p.query(`
+async function ensureTables(pool: Pool): Promise<void> {
+  await pool.query(`
     create table if not exists miniapp_notification_webhook_events (
       id bigserial primary key,
       received_at timestamptz not null default now(),
@@ -54,14 +51,10 @@ async function ensureTables(p: Pool): Promise<void> {
       decoded_header jsonb,
       decoded_payload jsonb
     );
-  `);
+  `)
+  await pool.query(`create index if not exists idx_mnwe_received_at on miniapp_notification_webhook_events (received_at desc);`)
 
-  await p.query(`
-    create index if not exists idx_mnwe_received_at
-      on miniapp_notification_webhook_events (received_at desc);
-  `);
-
-  await p.query(`
+  await pool.query(`
     create table if not exists miniapp_notification_subscribers (
       fid bigint not null,
       app_fid bigint not null,
@@ -71,117 +64,152 @@ async function ensureTables(p: Pool): Promise<void> {
       updated_at timestamptz not null default now(),
       primary key (fid, app_fid)
     );
-  `);
+  `)
+  await pool.query(`create index if not exists idx_subscribers_enabled on miniapp_notification_subscribers (enabled);`)
 
-  await p.query(`
-    create index if not exists idx_subscribers_enabled
-      on miniapp_notification_subscribers (enabled);
-  `);
+  // welcome tracking (once per fresh token)
+  await pool.query(`alter table miniapp_notification_subscribers add column if not exists welcome_token_sent text;`)
+  await pool.query(`alter table miniapp_notification_subscribers add column if not exists welcome_sent_at timestamptz;`)
+}
+
+async function sendNotification(
+  url: string,
+  token: string,
+  title: string,
+  body: string,
+  targetUrl: string,
+  notificationId: string
+): Promise<{ ok: boolean; status: number; json: any }> {
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      notificationId,
+      title,
+      body,
+      targetUrl,
+      tokens: [token]
+    })
+  })
+  const text = await resp.text()
+  let parsed: any = null
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    parsed = { raw: text }
+  }
+  return { ok: resp.ok, status: resp.status, json: parsed }
+}
+
+function deterministicWelcomeId(fid: number, token: string): string {
+  // stable-ish id per token, avoids dup welcome if Warpcast retries the same enable event
+  const hex = crypto.createHash("sha256").update(`welcome:${fid}:${token}`).digest("hex")
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const receivedAt = new Date();
+  if (req.method !== "POST") return res.status(405).json({ ok: false, error: "method_not_allowed" })
 
-  if (req.method !== "POST") {
-    res.status(405).json({ ok: false, error: "method_not_allowed" });
-    return;
-  }
-
-  const body = (req.body ?? {}) as Partial<WebhookBody>;
-  const headerB64 = typeof body.header === "string" ? body.header : "";
-  const payloadB64 = typeof body.payload === "string" ? body.payload : "";
+  const body = (req.body ?? {}) as WebhookBody
+  const headerB64 = body.header
+  const payloadB64 = body.payload
 
   if (!headerB64 || !payloadB64) {
-    // Returning 400 is fine, your doctor script treats 400 as reachable.
-    res.status(400).json({ ok: false, error: "bad_request", message: "missing header/payload" });
-    return;
+    return res.status(400).json({ ok: false, error: "missing_header_or_payload" })
   }
 
-  const decodedHeader = safeJsonParse<any>(b64urlToBuffer(headerB64).toString("utf8"));
-  const decodedPayload = safeJsonParse<any>(b64urlToBuffer(payloadB64).toString("utf8"));
+  const decodedHeaderStr = base64urlDecodeToString(headerB64)
+  const decodedPayloadStr = base64urlDecodeToString(payloadB64)
 
-  const p = getPool();
+  const decodedHeader = safeJsonParse<DecodedHeader>(decodedHeaderStr)
+  const decodedPayload = safeJsonParse<DecodedPayload>(decodedPayloadStr)
+
+  const pool = getPool()
   try {
-    await ensureTables(p);
+    await ensureTables(pool)
 
-    // Always store raw event for forensic debugging
-    await p.query(
-      `
-      insert into miniapp_notification_webhook_events (received_at, body, decoded_header, decoded_payload)
-      values ($1, $2::jsonb, $3::jsonb, $4::jsonb)
-      `,
-      [
-        receivedAt.toISOString(),
-        JSON.stringify({ header: headerB64, payload: payloadB64, signature: body.signature ?? null }),
-        JSON.stringify(decodedHeader ?? null),
-        JSON.stringify(decodedPayload ?? null),
-      ]
-    );
+    await pool.query(
+      `insert into miniapp_notification_webhook_events (body, decoded_header, decoded_payload)
+       values ($1::jsonb, $2::jsonb, $3::jsonb)`,
+      [JSON.stringify(body), JSON.stringify(decodedHeader), JSON.stringify(decodedPayload)]
+    )
 
-    const event = decodedPayload?.event;
-    const fid = decodedHeader?.fid;
-    const appFid = decodedHeader?.fid; // for miniapps, app_fid is the app fid. If you later support multi-app, replace this.
-    const notifUrl = decodedPayload?.notificationDetails?.url;
-    const token = decodedPayload?.notificationDetails?.token;
-
-    if (typeof fid !== "number" || typeof appFid !== "number") {
-      res.status(200).json({ ok: true, event, note: "no_fid" });
-      return;
-    }
-
-    // Apply subscriber state ONLY if this event is >= current updated_at.
-    // This prevents stale disable from nuking a fresh enable.
-    if (event === "notifications_enabled") {
-      if (typeof notifUrl !== "string" || typeof token !== "string") {
-        res.status(200).json({ ok: true, event, fid, appFid, enabled: false, note: "missing_token_or_url" });
-        return;
-      }
-
-      const r = await p.query(
-        `
-        insert into miniapp_notification_subscribers (fid, app_fid, token, notification_url, enabled, updated_at)
-        values ($1, $2, $3, $4, true, $5)
-        on conflict (fid, app_fid) do update
-          set token = excluded.token,
-              notification_url = excluded.notification_url,
-              enabled = true,
-              updated_at = excluded.updated_at
-        where miniapp_notification_subscribers.updated_at <= excluded.updated_at
-        returning fid, app_fid, enabled
-        `,
-        [fid, appFid, token, notifUrl, receivedAt.toISOString()]
-      );
-
-      res.status(200).json({ ok: true, event, fid, appFid, enabled: r.rows?.[0]?.enabled ?? true });
-      return;
-    }
+    const fid = decodedHeader?.fid
+    const event = decodedPayload?.event
+    if (!fid || !event) return res.status(200).json({ ok: true, event: "unknown" })
 
     if (event === "notifications_disabled") {
-      const r = await p.query(
-        `
-        insert into miniapp_notification_subscribers (fid, app_fid, token, notification_url, enabled, updated_at)
-        values ($1, $2, null, null, false, $3)
-        on conflict (fid, app_fid) do update
-          set token = null,
-              notification_url = null,
-              enabled = false,
-              updated_at = excluded.updated_at
-        where miniapp_notification_subscribers.updated_at <= excluded.updated_at
-        returning fid, app_fid, enabled
-        `,
-        [fid, appFid, receivedAt.toISOString()]
-      );
-
-      res.status(200).json({ ok: true, event, fid, appFid, enabled: r.rows?.[0]?.enabled ?? false });
-      return;
+      await pool.query(
+        `insert into miniapp_notification_subscribers (fid, app_fid, enabled, updated_at)
+         values ($1, $2, false, now())
+         on conflict (fid, app_fid)
+         do update set enabled=false, updated_at=now()`,
+        [fid, APP_FID]
+      )
+      return res.status(200).json({ ok: true, event, fid, appFid: APP_FID })
     }
 
-    res.status(200).json({ ok: true, event, fid, appFid, note: "ignored_event" });
+    if (event === "notifications_enabled") {
+      const details: any = (decodedPayload as any).notificationDetails ?? {}
+      const url = details.url as string | undefined
+      const token = details.token as string | undefined
+
+      await pool.query(
+        `insert into miniapp_notification_subscribers
+          (fid, app_fid, token, notification_url, enabled, updated_at)
+         values ($1, $2, $3, $4, true, now())
+         on conflict (fid, app_fid)
+         do update set token=excluded.token,
+                       notification_url=excluded.notification_url,
+                       enabled=true,
+                       updated_at=now()`,
+        [fid, APP_FID, token ?? null, url ?? null]
+      )
+
+      // Welcome notification: only once per fresh token
+      if (url && token) {
+        const row = await pool.query(
+          `select welcome_token_sent from miniapp_notification_subscribers where fid=$1 and app_fid=$2`,
+          [fid, APP_FID]
+        )
+        const alreadyForToken = row.rows?.[0]?.welcome_token_sent === token
+
+        if (!alreadyForToken) {
+          const notificationId = deterministicWelcomeId(fid, token)
+          const send = await sendNotification(
+            url,
+            token,
+            "NFT Season",
+            "You're in! Stay tuned for NFT alerts. Warp warp.",
+            "https://nft-season.vercel.app",
+            notificationId
+          )
+
+          const rateLimited =
+            send.ok &&
+            Array.isArray(send.json?.result?.rateLimitedTokens) &&
+            send.json.result.rateLimitedTokens.includes(token)
+
+          if (send.ok && !rateLimited) {
+            await pool.query(
+              `update miniapp_notification_subscribers
+               set welcome_token_sent=$3, welcome_sent_at=now()
+               where fid=$1 and app_fid=$2`,
+              [fid, APP_FID, token]
+            )
+          }
+        }
+      }
+
+      return res.status(200).json({ ok: true, event, fid, appFid: APP_FID, enabled: true })
+    }
+
+    return res.status(200).json({ ok: true, event, fid, appFid: APP_FID })
   } catch (e: any) {
-    res.status(500).json({
-      ok: false,
-      error: "webhook_failed",
-      message: e?.message ?? String(e),
-    });
+    return res.status(500).json({ ok: false, error: "webhook_failed", message: e?.message ?? String(e) })
+  } finally {
+    try {
+      await pool.end()
+    } catch {}
   }
 }

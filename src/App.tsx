@@ -74,10 +74,60 @@ function secondarySourceFor(c: Collection, secondaryUrl: string | null): LinkSou
   return "opensea"
 }
 
+function BellIcon({ checked }: { checked: boolean }) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: 20,
+        height: 20,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }}
+      aria-hidden="true"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22Z" fill="currentColor" opacity="0.9" />
+        <path
+          d="M18.4 16.2c-.9-1-1.4-1.9-1.4-4.7 0-3.4-2-5.5-5-6.1V4a1 1 0 1 0-2 0v1.4c-3 .6-5 2.7-5 6.1 0 2.8-.5 3.7-1.4 4.7-.3.3-.4.7-.2 1.1.2.4.6.6 1 .6h15.2c.4 0 .8-.2 1-.6.2-.4.1-.8-.2-1.1Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+
+      {checked ? (
+        <div
+          style={{
+            position: "absolute",
+            right: -2,
+            top: -2,
+            width: 11,
+            height: 11,
+            borderRadius: 999,
+            background: "rgba(80, 200, 120, 0.95)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.55)"
+          }}
+        >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17l-5-5" stroke="black" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>(groups[0]?.title ?? "NFTs")
   // const [query, setQuery] = useState("")
   const [readyCalled, setReadyCalled] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
 
   const fidCacheRef = useRef<Map<string, number>>(new Map())
 
@@ -89,6 +139,30 @@ export default function App() {
         setReadyCalled(true)
       }
     })()
+  }, [])
+
+  const refreshNotificationState = async (): Promise<void> => {
+    try {
+      const ctx = await (sdk as any).context
+      const nd = (ctx as any)?.client?.notificationDetails
+      const enabled = Boolean(nd?.token) && Boolean(nd?.url)
+      setNotificationsEnabled(enabled)
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    void refreshNotificationState()
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") void refreshNotificationState()
+    }
+    document.addEventListener("visibilitychange", onVis)
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVis)
+    }
   }, [])
 
   const groupsByTitle = useMemo(() => {
@@ -178,6 +252,21 @@ export default function App() {
   const featuredPrimaryLabel = featured ? primaryLabelForCollection(featured, activeGroup.title, featuredPrimarySource) : ""
   const featuredSecondaryLabel = featured ? secondaryLabelForCollection(featured, featuredSecondarySource) : ""
 
+  const onBellClick = async (): Promise<void> => {
+    try {
+      // Best-effort: Warpcast surfaces notification controls via the ⋮ menu.
+      // addMiniApp is harmless if already added; it nudges the right UX path.
+      await sdk.actions.addMiniApp()
+    } catch {
+      // ignore
+    } finally {
+      // state may change when they come back from the menu
+      window.setTimeout(() => {
+        void refreshNotificationState()
+      }, 600)
+    }
+  }
+
   return (
     <div
       style={{
@@ -217,50 +306,68 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
             <div>
               <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>NFT Season</div>
-	      <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>
-                Updated {BUILD_DATE}
-              </div>
-              </div>
+              <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(255,255,255,0.65)" }}>Updated {BUILD_DATE}</div>
+            </div>
 
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
-              <div style={{ fontWeight: 800 }}>
-                miniapp created by{" "}
-                <button
-                  onClick={() => onHandleClick("@raspishake")}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
-                    margin: 0,
-                    color: "#8ab4ff",
-                    cursor: "pointer",
-                    fontWeight: 900
-                  }}
-                  type="button"
-                  title="Open @raspishake on Farcaster"
-                >
-                  @raspishake
-                </button>
-              </div>
-              <div style={{ marginTop: 2 }}>
-                (Raspberry Shake, S.A.,{" "}
-                <button
-                  onClick={() => void safeOpenUrl(sdk, "https://raspberryshake.org")}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
-                    margin: 0,
-                    color: "#8ab4ff",
-                    cursor: "pointer",
-                    fontWeight: 750
-                  }}
-                  title="Open raspberryshake.org"
-                  type="button"
-                >
-                  https://raspberryshake.org
-                </button>
-                )
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button
+                onClick={() => void onBellClick()}
+                type="button"
+                aria-label={notificationsEnabled ? "Notifications enabled" : "Enable notifications"}
+                style={{
+                  width: 36,
+                  height: 30,
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "rgba(0,0,0,0.22)",
+                  color: "rgba(255,255,255,0.92)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer"
+                }}
+              >
+                <BellIcon checked={notificationsEnabled} />
+              </button>
+
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.60)", textAlign: "right" }}>
+                <div style={{ fontWeight: 800 }}>
+                  miniapp created by{" "}
+                  <button
+                    onClick={() => onHandleClick("@raspishake")}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      margin: 0,
+                      color: "#8ab4ff",
+                      cursor: "pointer",
+                      fontWeight: 900
+                    }}
+                    type="button"
+                  >
+                    @raspishake
+                  </button>
+                </div>
+                <div style={{ marginTop: 2 }}>
+                  (Raspberry Shake, S.A.,{" "}
+                  <button
+                    onClick={() => void safeOpenUrl(sdk, "https://raspberryshake.org")}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      margin: 0,
+                      color: "#8ab4ff",
+                      cursor: "pointer",
+                      fontWeight: 750
+                    }}
+                    type="button"
+                  >
+                    https://raspberryshake.org
+                  </button>
+                  )
+                </div>
               </div>
             </div>
           </div>
@@ -362,14 +469,11 @@ export default function App() {
             <RichText text="Want to see your FC NFT collection featured here? DM @raspishake." onHandleClick={onHandleClick} />
           </div>
           <div style={{ marginTop: 8 }}>
-	    <strong>
-             <em>
-               <RichText
-                 text="Support the Developer: send an NFT to our Warplet. Ty"
-                 onHandleClick={onHandleClick}
-               />
-             </em>
-           </strong>
+            <strong>
+              <em>
+                <RichText text="Support the Developer: send an NFT to our Warplet. Ty" onHandleClick={onHandleClick} />
+              </em>
+            </strong>
           </div>
           <div style={{ marginTop: 10, fontSize: 11.5, color: "rgba(255,255,255,0.55)" }}>
             {readyCalled ? "" : "Loading..."}
