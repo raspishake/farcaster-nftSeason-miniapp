@@ -20,7 +20,7 @@ If you read this first, you would avoid ~90% of the friction we hit.
 - The Mini App UI **cannot toggle notifications directly**.
 - The bell icon is UX sugar, not a switch.
 - Neynar is **not required** for notifications.
-- The Farcaster docs omit several critical behaviors that only show up when you actually ship.
+- The Farcaster docs (https://miniapps.farcaster.xyz/docs/guides/notifications) omit several critical behaviors that only show up when you actually ship.
 
 ---
 
