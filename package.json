@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "db:init": "tsx scripts/db-init.ts",
     "notify:send": "tsx scripts/send-notification.ts",
-    "editor": "tsx scripts/editor-server.ts"
+    "editor": "tsx scripts/editor-server.ts",
+    "notifications": "tsx scripts/notifications-manager.ts"
   },
   "dependencies": {
     "@farcaster/miniapp-node": "^0.1.11",
