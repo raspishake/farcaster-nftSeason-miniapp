@@ -1,300 +1,274 @@
 // scripts/editor-server.ts
-import express from "express";
-import { existsSync, writeFileSync } from "fs";
-import { resolve } from "path";
-import { spawn } from "child_process";
-import { serializeCollectionsTs, type CollectionsState } from "./collections-serializer";
+import express from "express"
+import { existsSync, writeFileSync } from "fs"
+import { resolve } from "path"
+import { spawn } from "child_process"
+import { serializeCollectionsTs, type CollectionsState } from "./collections-serializer"
 
-const app = express();
-app.use(express.json({ limit: "10mb" }));
+const app = express()
+app.use(express.json({ limit: "10mb" }))
 
-const HOST = process.env.EDITOR_HOST ?? "127.0.0.1";
-const PORT = Number(process.env.EDITOR_PORT ?? "8787");
+const HOST = process.env.EDITOR_HOST ?? "127.0.0.1"
+const PORT = Number(process.env.EDITOR_PORT ?? "8787")
 
 // Security controls:
 // - Default: require token.
 // - Optional: disable token ONLY when bound to 127.0.0.1, and enforce strict Origin/Referer checks.
-const TOKEN = (process.env.EDITOR_TOKEN ?? "").trim();
-const NO_TOKEN = (process.env.EDITOR_NO_TOKEN ?? "").trim() === "1";
-
-// Notifications (production Mini App domain)
-const PROD_ORIGIN = (process.env.NFT_SEASON_ORIGIN ?? "https://nft-season.vercel.app").replace(/\/+$/, "");
+const TOKEN = (process.env.EDITOR_TOKEN ?? "").trim()
+const NO_TOKEN = (process.env.EDITOR_NO_TOKEN ?? "").trim() === "1"
 
 function requireLocalOnly(req: express.Request, res: express.Response): boolean {
   if (HOST !== "127.0.0.1" && HOST !== "localhost") {
-    res.status(500).json({ error: "Refusing to run editor unless bound to 127.0.0.1 or localhost." });
-    return false;
+    res.status(500).json({ error: "Refusing to run editor unless bound to 127.0.0.1 or localhost." })
+    return false
   }
-  return true;
+  return true
 }
 
 function requireOrigin(req: express.Request, res: express.Response): boolean {
-  // CSRF mitigation for local services.
-  const expected = `http://${HOST}:${PORT}`;
-  const origin = (req.header("origin") ?? "").trim();
-  const referer = (req.header("referer") ?? "").trim();
+  // This is a CSRF mitigation for local services.
+  // We only allow requests coming from this same origin.
+  const expected = `http://${HOST}:${PORT}`
+  const origin = (req.header("origin") ?? "").trim()
+  const referer = (req.header("referer") ?? "").trim()
 
+  // Allow no-origin for curl-like clients if they have the token; if NO_TOKEN, we require origin/referer.
   if (NO_TOKEN) {
-    const ok = origin === expected || referer.startsWith(expected);
+    const ok = origin === expected || referer.startsWith(expected)
     if (!ok) {
-      res.status(403).json({ error: "Forbidden: origin/referer check failed." });
-      return false;
+      res.status(403).json({ error: "Forbidden: origin/referer check failed." })
+      return false
     }
   }
-  return true;
+  return true
 }
 
 function requireToken(req: express.Request, res: express.Response): boolean {
-  if (!requireLocalOnly(req, res)) return false;
-  if (!requireOrigin(req, res)) return false;
+  if (!requireLocalOnly(req, res)) return false
+  if (!requireOrigin(req, res)) return false
 
-  if (NO_TOKEN) return true;
+  if (NO_TOKEN) return true
 
   if (!TOKEN) {
-    res.status(500).json({ error: "EDITOR_TOKEN is not set. Set it or set EDITOR_NO_TOKEN=1 (local only)." });
-    return false;
+    res.status(500).json({ error: "EDITOR_TOKEN is not set. Set it or set EDITOR_NO_TOKEN=1 (local only)." })
+    return false
   }
-  const got = (req.header("x-editor-token") ?? "").trim();
+  const got = (req.header("x-editor-token") ?? "").trim()
   if (!got || got !== TOKEN) {
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
+    res.status(401).json({ error: "Unauthorized" })
+    return false
   }
-  return true;
+  return true
 }
 
-function requireAdminTokenHeader(req: express.Request, res: express.Response): string | null {
-  const t = (req.header("x-admin-token") ?? "").trim();
-  if (!t) {
-    res.status(400).json({ error: "Missing x-admin-token (paste ADMIN_TOKEN in the editor UI)." });
-    return null;
-  }
-  return t;
-}
+const repoRoot = process.cwd()
+const collectionsPath = resolve(repoRoot, "src/data/collections.ts")
+const deployPath = resolve(repoRoot, "deploy.sh")
 
-const repoRoot = process.cwd();
-const collectionsPath = resolve(repoRoot, "src/data/collections.ts");
-const deployPath = resolve(repoRoot, "deploy.sh");
-
-type RunResult = { ok: boolean; code: number | null; output: string };
+type RunResult = { ok: boolean; code: number | null; output: string }
 
 function runCmd(cmd: string, args: string[], opts?: { cwd?: string }): Promise<RunResult> {
-  return new Promise((resolvePromise) => {
+  return new Promise(resolvePromise => {
     const child = spawn(cmd, args, {
       cwd: opts?.cwd ?? repoRoot,
       stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
-    });
+      env: process.env
+    })
 
-    let out = "";
-    child.stdout.on("data", (d) => (out += d.toString("utf8")));
-    child.stderr.on("data", (d) => (out += d.toString("utf8")));
+    let out = ""
+    child.stdout.on("data", d => (out += d.toString("utf8")))
+    child.stderr.on("data", d => (out += d.toString("utf8")))
 
-    child.on("close", (code) => resolvePromise({ ok: code === 0, code, output: out }));
-  });
+    child.on("close", code => resolvePromise({ ok: code === 0, code, output: out }))
+  })
 }
 
 async function loadStateFromModule(): Promise<CollectionsState> {
-  if (!existsSync(collectionsPath)) throw new Error(`Missing: ${collectionsPath}`);
+  if (!existsSync(collectionsPath)) throw new Error(`Missing: ${collectionsPath}`)
 
-  const mod = await import(resolve(repoRoot, "src/data/collections.ts") + `?t=${Date.now()}`);
+  const mod = await import(resolve(repoRoot, "src/data/collections.ts") + `?t=${Date.now()}`)
 
-  const collectionsById = mod.collectionsById as CollectionsState["collectionsById"];
-  const groups = mod.groups as CollectionsState["groups"];
+  const collectionsById = mod.collectionsById as CollectionsState["collectionsById"]
+  const groups = mod.groups as CollectionsState["groups"]
 
-  if (!collectionsById || typeof collectionsById !== "object") throw new Error("collectionsById missing or invalid export");
-  if (!Array.isArray(groups)) throw new Error("groups missing or invalid export");
+  if (!collectionsById || typeof collectionsById !== "object") throw new Error("collectionsById missing or invalid export")
+  if (!Array.isArray(groups)) throw new Error("groups missing or invalid export")
 
-  return { collectionsById, groups };
+  return { collectionsById, groups }
 }
 
 function validateStateLight(state: CollectionsState): string[] {
-  const errors: string[] = [];
+  const errors: string[] = []
 
-  const ids = Object.keys(state.collectionsById);
-  const idSet = new Set(ids);
+  const ids = Object.keys(state.collectionsById)
+  const idSet = new Set(ids)
 
   for (const id of ids) {
-    const c = state.collectionsById[id];
-    if (!c) errors.push(`Collection "${id}" is null/undefined.`);
-    if (c.id !== id) errors.push(`Collection key "${id}" mismatch with c.id "${c.id}".`);
-    if (!c.name?.trim()) errors.push(`Collection "${id}" missing name.`);
-    if (!Array.isArray(c.creators) || c.creators.length === 0) errors.push(`Collection "${id}" missing creators.`);
-    if (!c.thumbnail?.trim()) errors.push(`Collection "${id}" missing thumbnail.`);
-    if (!c.network) errors.push(`Collection "${id}" missing network.`);
+    const c = state.collectionsById[id]
+    if (!c) errors.push(`Collection "${id}" is null/undefined.`)
+    if (c.id !== id) errors.push(`Collection key "${id}" mismatch with c.id "${c.id}".`)
+    if (!c.name?.trim()) errors.push(`Collection "${id}" missing name.`)
+    if (!Array.isArray(c.creators) || c.creators.length === 0) errors.push(`Collection "${id}" missing creators.`)
+    if (!c.thumbnail?.trim()) errors.push(`Collection "${id}" missing thumbnail.`)
+    if (!c.network) errors.push(`Collection "${id}" missing network.`)
   }
 
   for (const g of state.groups) {
-    if (!g.title?.trim()) errors.push(`A group is missing title.`);
-    if (!g.description?.trim()) errors.push(`Group "${g.title}" missing description.`);
+    if (!g.title?.trim()) errors.push(`A group is missing title.`)
+    if (!g.description?.trim()) errors.push(`Group "${g.title}" missing description.`)
 
-    const seen = new Set<string>();
-    const dupes: string[] = [];
+    const seen = new Set<string>()
+    const dupes: string[] = []
     for (const id of g.itemIds ?? []) {
-      if (seen.has(id)) dupes.push(id);
-      seen.add(id);
+      if (seen.has(id)) dupes.push(id)
+      seen.add(id)
     }
-    if (dupes.length) errors.push(`Group "${g.title}" has duplicate itemIds: ${[...new Set(dupes)].join(", ")}.`);
+    if (dupes.length) errors.push(`Group "${g.title}" has duplicate itemIds: ${[...new Set(dupes)].join(", ")}.`)
 
     if (g.featuredId) {
-      if (!idSet.has(g.featuredId)) errors.push(`Group "${g.title}" featuredId "${g.featuredId}" does not exist.`);
-      if ((g.itemIds ?? []).includes(g.featuredId)) errors.push(`Group "${g.title}" featuredId is also in itemIds.`);
+      if (!idSet.has(g.featuredId)) errors.push(`Group "${g.title}" featuredId "${g.featuredId}" does not exist.`)
+      if ((g.itemIds ?? []).includes(g.featuredId)) errors.push(`Group "${g.title}" featuredId is also in itemIds.`)
     } else {
-      errors.push(`Group "${g.title}" missing featuredId.`);
+      errors.push(`Group "${g.title}" missing featuredId.`)
     }
 
     for (const id of g.itemIds ?? []) {
-      if (!idSet.has(id)) errors.push(`Group "${g.title}" references unknown collection id "${id}".`);
+      if (!idSet.has(id)) errors.push(`Group "${g.title}" references unknown collection id "${id}".`)
     }
   }
 
-  return errors;
+  return errors
 }
 
 app.get("/", (_req, res) => {
-  res.setHeader("content-type", "text/html; charset=utf-8");
+  res.setHeader("content-type", "text/html; charset=utf-8")
   res.send(`<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NFT Season Editor</title>
-<style>
-  :root { color-scheme: dark; }
-  body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system; background: #0b0f14; color: rgba(255,255,255,0.92); }
-  header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.10); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  header h1 { margin: 0; font-size: 14px; font-weight: 900; }
-  .wrap { padding: 14px 16px; display: grid; grid-template-columns: 360px 1fr; gap: 12px; align-items: start; }
-  @media (max-width: 980px) { .wrap { grid-template-columns: 1fr; } }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NFT Season Editor</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system; background: #0b0f14; color: rgba(255,255,255,0.92); }
+    header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.10); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 14px; font-weight: 900; }
+    .wrap { padding: 14px 16px; display: grid; grid-template-columns: 360px 1fr; gap: 12px; align-items: start; }
+    @media (max-width: 980px) { .wrap { grid-template-columns: 1fr; } }
 
-  .card { border: 1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.18); border-radius: 14px; padding: 12px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .col { display: flex; flex-direction: column; gap: 8px; }
-  .small { font-size: 12px; color: rgba(255,255,255,0.65); }
-  .title { font-size: 12px; font-weight: 900; color: rgba(255,255,255,0.85); }
-  .hr { height: 1px; background: rgba(255,255,255,0.10); margin: 10px 0; }
+    .card { border: 1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.18); border-radius: 14px; padding: 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .col { display: flex; flex-direction: column; gap: 8px; }
+    .small { font-size: 12px; color: rgba(255,255,255,0.65); }
+    .title { font-size: 12px; font-weight: 900; color: rgba(255,255,255,0.85); }
+    .hr { height: 1px; background: rgba(255,255,255,0.10); margin: 10px 0; }
 
-  input, textarea, select, button {
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.14);
-    background: rgba(255,255,255,0.06);
-    color: rgba(255,255,255,0.92);
-    padding: 10px 12px;
-    font-weight: 750;
-    font-size: 13px;
-  }
-  textarea { min-height: 110px; resize: vertical; }
+    input, textarea, select, button {
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      padding: 10px 12px;
+      font-weight: 750;
+      font-size: 13px;
+    }
+    textarea { min-height: 110px; resize: vertical; }
 
-  select { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.92); }
-  option { background: #0b0f14; color: rgba(255,255,255,0.92); }
+    /* Fix “blank until hovered” select/option rendering */
+    select { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.92); }
+    option { background: #0b0f14; color: rgba(255,255,255,0.92); }
 
-  button { cursor: pointer; }
-  button.primary { border: 1px solid rgba(138,180,255,0.55); background: rgba(138,180,255,0.16); }
-  button.danger { border: 1px solid rgba(255,120,120,0.55); background: rgba(255,120,120,0.14); }
-  button.ghost { background: transparent; border: 1px solid rgba(255,255,255,0.12); }
+    button { cursor: pointer; }
+    button.primary { border: 1px solid rgba(138,180,255,0.55); background: rgba(138,180,255,0.16); }
+    button.danger { border: 1px solid rgba(255,120,120,0.55); background: rgba(255,120,120,0.14); }
+    button.ghost { background: transparent; border: 1px solid rgba(255,255,255,0.12); }
 
-  .list { display: flex; flex-direction: column; gap: 8px; }
-  .item { display: flex; justify-content: space-between; gap: 8px; align-items: center; border-radius: 12px; padding: 10px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); }
-  .item strong { font-size: 13px; }
-  .item .meta { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; }
-  .pill { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); color: rgba(255,255,255,0.75); }
-  .pill.new { border-color: rgba(138,180,255,0.5); color: rgba(138,180,255,0.95); }
+    .list { display: flex; flex-direction: column; gap: 8px; }
+    .item { display: flex; justify-content: space-between; gap: 8px; align-items: center; border-radius: 12px; padding: 10px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); }
+    .item strong { font-size: 13px; }
+    .item .meta { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+    .pill { font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); color: rgba(255,255,255,0.75); }
+    .pill.new { border-color: rgba(138,180,255,0.5); color: rgba(138,180,255,0.95); }
 
-  pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12.5px; }
+    pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12.5px; }
 
-  .split { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
-  @media (max-width: 980px) { .split { grid-template-columns: 1fr; } }
+    .split { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+    @media (max-width: 980px) { .split { grid-template-columns: 1fr; } }
 
-  .splitCollections { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
-  @media (max-width: 980px) { .splitCollections { grid-template-columns: 1fr; } }
+    /* Pinned editor layout */
+    .splitCollections { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+    @media (max-width: 980px) { .splitCollections { grid-template-columns: 1fr; } }
 
-  .scrollPane { max-height: calc(100vh - 190px); overflow: auto; padding-right: 4px; }
-  @media (max-width: 980px) { .scrollPane { max-height: unset; } }
+    .scrollPane {
+      max-height: calc(100vh - 190px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+    @media (max-width: 980px) { .scrollPane { max-height: unset; } }
 
-  .stickyEditor { position: sticky; top: 12px; align-self: start; }
-  @media (max-width: 980px) { .stickyEditor { position: static; } }
+    .stickyEditor {
+      position: sticky;
+      top: 12px;
+      align-self: start;
+    }
+    @media (max-width: 980px) { .stickyEditor { position: static; } }
 
-  .kbar { display:flex; gap:8px; flex-wrap:wrap; }
-  .mutedBox { border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03); border-radius: 12px; padding: 10px; }
-</style>
+    .kbar { display:flex; gap:8px; flex-wrap:wrap; }
+    .mutedBox { border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03); border-radius: 12px; padding: 10px; }
+  </style>
 </head>
 <body>
-<header>
-  <h1>NFT Season Editor (local)</h1>
-  <span class="small">Collections + Groups editor, generates src/data/collections.ts, runs validate + deploy, manual notifications</span>
-</header>
+  <header>
+    <h1>NFT Season Editor (local)</h1>
+    <span class="small">Collections + Groups editor, generates src/data/collections.ts, runs validate + deploy</span>
+  </header>
 
-<div class="wrap">
-  <div class="card col">
-    <div class="title">Session</div>
-    <div class="row">
-      <input id="token" placeholder="${NO_TOKEN ? "No token mode" : "EDITOR_TOKEN"}" autocomplete="off" style="width: 260px; max-width:100%;" ${NO_TOKEN ? "disabled" : ""} />
-      <button class="primary" id="load">Load</button>
-      <button class="primary" id="save">Save</button>
-    </div>
-
-    <div class="kbar">
-      <button id="validate">Validate</button>
-      <button class="danger" id="deploy">Deploy</button>
-    </div>
-
-    <div class="hr"></div>
-
-    <div class="title">Notifications (manual)</div>
-    <div class="small">Sends to users who enabled notifications in Farcaster for NFT Season.</div>
-
-    <div class="row">
-      <input id="adminToken" placeholder="ADMIN_TOKEN (local only)" autocomplete="off" style="width: 260px; max-width:100%;" />
-      <button class="ghost" id="notifRefresh">Refresh count</button>
-    </div>
-
-    <div class="row">
-      <span class="small">Enabled subscribers:</span>
-      <span id="subCount" class="pill">?</span>
-    </div>
-
-    <div class="col">
-      <input id="notifTitle" placeholder="Title (max 32)" maxlength="32" />
-      <textarea id="notifBody" placeholder="Body (max 128)" maxlength="128"></textarea>
-      <input id="notifTarget" placeholder="Target URL on nft-season.vercel.app (example: https://nft-season.vercel.app/?group=live)" />
+  <div class="wrap">
+    <div class="card col">
+      <div class="title">Session</div>
       <div class="row">
-        <button class="primary" id="notifSend">Send notification</button>
+        <input id="token" placeholder="${NO_TOKEN ? "No token mode" : "EDITOR_TOKEN"}" autocomplete="off" style="width: 260px; max-width:100%;" ${NO_TOKEN ? "disabled" : ""} />
+        <button class="primary" id="load">Load</button>
+        <button class="primary" id="save">Save</button>
+      </div>
+
+      <div class="kbar">
+        <button id="validate">Validate</button>
+        <button class="danger" id="deploy">Deploy</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="title">View</div>
+      <div class="row">
+        <button class="ghost" id="tabCollections">Collections</button>
+        <button class="ghost" id="tabGroups">Groups</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="title">Search</div>
+      <input id="search" placeholder="Filter by name, id, @handle" />
+
+      <div class="hr"></div>
+
+      <div class="title">Logs</div>
+      <pre id="logs" style="max-height: 34vh; overflow:auto;"></pre>
+
+      <div class="hr"></div>
+      <div class="small">
+        ${NO_TOKEN ? "Security: NO_TOKEN mode enabled (Origin-checked, local only)." : "Security: token required (recommended)."}
       </div>
     </div>
 
-    <div class="hr"></div>
-
-    <div class="title">View</div>
-    <div class="row">
-      <button class="ghost" id="tabCollections">Collections</button>
-      <button class="ghost" id="tabGroups">Groups</button>
-    </div>
-
-    <div class="hr"></div>
-
-    <div class="title">Search</div>
-    <input id="search" placeholder="Filter by name, id, @handle" />
-
-    <div class="hr"></div>
-
-    <div class="title">Logs</div>
-    <pre id="logs" style="max-height: 34vh; overflow:auto;"></pre>
-
-    <div class="hr"></div>
-    <div class="small">
-      ${NO_TOKEN ? "Security: NO_TOKEN mode enabled (Origin-checked, local only)." : "Security: token required (recommended)."}
-    </div>
-    <div class="small">Prod origin: ${PROD_ORIGIN}</div>
+    <div class="card" id="main"></div>
   </div>
-
-  <div class="card" id="main"></div>
-</div>
 
 <script>
   const $ = (id) => document.getElementById(id)
   const logs = $("logs")
   const main = $("main")
   const tokenInput = $("token")
-  const adminTokenInput = $("adminToken")
   const searchInput = $("search")
 
   let state = null
@@ -324,15 +298,6 @@ app.get("/", (_req, res) => {
     const body = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(body.error || ("HTTP " + res.status))
     return body
-  }
-
-  async function apiAdmin(path, opts = {}) {
-    const admin = adminTokenInput.value.trim()
-    if (!admin) throw new Error("Paste ADMIN_TOKEN first.")
-    return api(path, {
-      ...opts,
-      headers: { ...(opts.headers || {}), "x-admin-token": admin }
-    })
   }
 
   function deepCopy(x) { return JSON.parse(JSON.stringify(x)) }
@@ -603,6 +568,9 @@ app.get("/", (_req, res) => {
       return \`<option value="\${id}" \${g.featuredId===id?"selected":""}>\${c.name} (\${id})</option>\`
     }).join("")
 
+    const selected = new Set(g.itemIds || [])
+    const featuredId = g.featuredId || ""
+
     const selectedList = (g.itemIds || []).map((id, i) => {
       const c = state.collectionsById[id]
       const name = c ? c.name : id
@@ -621,6 +589,7 @@ app.get("/", (_req, res) => {
       \`
     }).join("")
 
+    // Available list will be rendered by JS using search input
     return \`
       <div class="col">
         <div class="row"><div class="small">title</div><input id="g_title" value="\${g.title||""}" style="flex:1;" /></div>
@@ -636,7 +605,7 @@ app.get("/", (_req, res) => {
         <div class="title">Items</div>
 
         <div class="mutedBox">
-          <div class="small" style="margin-bottom:8px;">Selected items</div>
+          <div class="small" style="margin-bottom:8px;">Selected items (order here is what you’ll see in the editor, app sorts at runtime)</div>
           <div class="col" id="g_selected_list">\${selectedList || '<div class="small">No items yet.</div>'}</div>
         </div>
 
@@ -702,6 +671,7 @@ app.get("/", (_req, res) => {
     if (set.has(id)) return
     g.itemIds = [...(g.itemIds || []), id]
     render()
+    // After re-render, restore selection and update list
     selectedGroupIndex = idx
     setTimeout(() => {
       const search = $("g_add_search")
@@ -745,10 +715,14 @@ app.get("/", (_req, res) => {
     if (!description) return alert("description required")
     if (!featuredId) return alert("featuredId required")
 
+    // Ensure featured not in items
     g.itemIds = (g.itemIds || []).filter(id => id !== featuredId)
+
     g.title = title
     g.description = description
     g.featuredId = featuredId
+
+    // Ensure uniqueness
     g.itemIds = Array.from(new Set(g.itemIds || []))
 
     render()
@@ -788,44 +762,6 @@ app.get("/", (_req, res) => {
     }, 0)
   }
 
-  // ---------- Notifications ----------
-  async function refreshSubscriberCount() {
-    try {
-      const r = await apiAdmin("/api/notify/stats", { method: "POST", body: JSON.stringify({}) })
-      $("subCount").textContent = String(r.enabledSubscribers ?? "?")
-      log("Subscribers: " + String(r.enabledSubscribers ?? "?"))
-    } catch (e) {
-      log("ERROR (stats): " + e.message)
-    }
-  }
-
-  $("notifRefresh").onclick = () => refreshSubscriberCount()
-
-  $("notifSend").onclick = async () => {
-    try {
-      const title = $("notifTitle").value.trim()
-      const body = $("notifBody").value.trim()
-      const targetUrl = $("notifTarget").value.trim()
-
-      if (!title) return alert("Title required")
-      if (!body) return alert("Body required")
-      if (!targetUrl) return alert("Target URL required")
-      if (title.length > 32) return alert("Title too long (max 32)")
-      if (body.length > 128) return alert("Body too long (max 128)")
-
-      log("Sending notification ...")
-      const r = await apiAdmin("/api/notify/send", {
-        method: "POST",
-        body: JSON.stringify({ title, body, targetUrl })
-      })
-      log(JSON.stringify(r, null, 2))
-      log("Notification send OK.")
-      refreshSubscriberCount()
-    } catch (e) {
-      log("ERROR (send): " + e.message)
-    }
-  }
-
   // ---------- Global UI ----------
   $("tabCollections").onclick = () => { activeTab = "collections"; render() }
   $("tabGroups").onclick = () => { activeTab = "groups"; render() }
@@ -841,7 +777,6 @@ app.get("/", (_req, res) => {
       selectedGroupIndex = null
       log("Loaded.")
       render()
-      refreshSubscriberCount()
     } catch (e) {
       log("ERROR: " + e.message)
     }
@@ -882,106 +817,61 @@ app.get("/", (_req, res) => {
   render()
 </script>
 </body>
-</html>`);
-});
+</html>`)
+})
 
 app.get("/api/state/load", async (req, res) => {
-  if (!requireToken(req, res)) return;
+  if (!requireToken(req, res)) return
   try {
-    const state = await loadStateFromModule();
-    res.json({ ok: true, state });
+    const state = await loadStateFromModule()
+    res.json({ ok: true, state })
   } catch (e: any) {
-    res.status(500).json({ error: e?.message ?? "Failed to load state" });
+    res.status(500).json({ error: e?.message ?? "Failed to load state" })
   }
-});
+})
 
 app.post("/api/state/save", async (req, res) => {
-  if (!requireToken(req, res)) return;
+  if (!requireToken(req, res)) return
   try {
-    const state = req.body?.state as CollectionsState;
-    if (!state || typeof state !== "object") return res.status(400).json({ error: "Missing state" });
+    const state = req.body?.state as CollectionsState
+    if (!state || typeof state !== "object") return res.status(400).json({ error: "Missing state" })
 
-    const errors = validateStateLight(state);
-    if (errors.length) return res.status(400).json({ error: errors.join("\n") });
+    const errors = validateStateLight(state)
+    if (errors.length) return res.status(400).json({ error: errors.join("\n") })
 
-    const now = new Date();
-    const label = now.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
+    const now = new Date()
+    const label = now.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" })
 
-    const ts = serializeCollectionsTs(state, label);
-    writeFileSync(collectionsPath, ts, "utf8");
+    const ts = serializeCollectionsTs(state, label)
+    writeFileSync(collectionsPath, ts, "utf8")
 
-    res.json({ ok: true, output: `✓ Wrote ${collectionsPath}\n✓ Saved: ${label}` });
+    res.json({ ok: true, output: `✓ Wrote ${collectionsPath}\n✓ Saved: ${label}` })
   } catch (e: any) {
-    res.status(500).json({ error: e?.message ?? "Failed to save" });
+    res.status(500).json({ error: e?.message ?? "Failed to save" })
   }
-});
+})
 
 app.post("/api/run/validate", async (req, res) => {
-  if (!requireToken(req, res)) return;
-  const r = await runCmd("npm", ["run", "validate:data"]);
-  res.json(r);
-});
+  if (!requireToken(req, res)) return
+  const r = await runCmd("npm", ["run", "validate:data"])
+  res.json(r)
+})
 
 app.post("/api/run/deploy", async (req, res) => {
-  if (!requireToken(req, res)) return;
-  if (!existsSync(deployPath)) return res.status(404).json({ error: `Missing deploy script: ${deployPath}` });
-  const r = await runCmd("bash", [deployPath]);
-  res.json(r);
-});
-
-// ---- Local proxy endpoints for notifications (avoid CORS) ----
-
-app.post("/api/notify/stats", async (req, res) => {
-  if (!requireToken(req, res)) return;
-  const admin = requireAdminTokenHeader(req, res);
-  if (!admin) return;
-
-  try {
-    const r = await fetch(`${PROD_ORIGIN}/api/notify/stats`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${admin}`, "content-type": "application/json" },
-      body: JSON.stringify({})
-    });
-    const text = await r.text();
-    if (!r.ok) return res.status(r.status).json({ error: text || `HTTP ${r.status}` });
-    res.setHeader("content-type", "application/json");
-    res.send(text);
-  } catch (e: any) {
-    res.status(500).json({ error: e?.message ?? "Failed to fetch stats" });
-  }
-});
-
-app.post("/api/notify/send", async (req, res) => {
-  if (!requireToken(req, res)) return;
-  const admin = requireAdminTokenHeader(req, res);
-  if (!admin) return;
-
-  const { title, body, targetUrl } = req.body ?? {};
-  if (!title || !body || !targetUrl) return res.status(400).json({ error: "Missing title/body/targetUrl" });
-
-  try {
-    const r = await fetch(`${PROD_ORIGIN}/api/notify/broadcast`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${admin}`, "content-type": "application/json" },
-      body: JSON.stringify({ title, body, targetUrl })
-    });
-    const text = await r.text();
-    if (!r.ok) return res.status(r.status).json({ error: text || `HTTP ${r.status}` });
-    res.setHeader("content-type", "application/json");
-    res.send(text);
-  } catch (e: any) {
-    res.status(500).json({ error: e?.message ?? "Failed to send notification" });
-  }
-});
+  if (!requireToken(req, res)) return
+  if (!existsSync(deployPath)) return res.status(404).json({ error: `Missing deploy script: ${deployPath}` })
+  const r = await runCmd("bash", [deployPath])
+  res.json(r)
+})
 
 app.listen(PORT, HOST, () => {
   if (!NO_TOKEN && !TOKEN) {
-    console.error("EDITOR_TOKEN is not set. Set it or set EDITOR_NO_TOKEN=1 (local only).");
-    process.exit(1);
+    console.error("EDITOR_TOKEN is not set. Set it or set EDITOR_NO_TOKEN=1 (local only).")
+    process.exit(1)
   }
   if (NO_TOKEN && (HOST !== "127.0.0.1" && HOST !== "localhost")) {
-    console.error("EDITOR_NO_TOKEN=1 requires EDITOR_HOST=127.0.0.1 (or localhost).");
-    process.exit(1);
+    console.error("EDITOR_NO_TOKEN=1 requires EDITOR_HOST=127.0.0.1 (or localhost).")
+    process.exit(1)
   }
-  console.log(`Editor running on http://${HOST}:${PORT}`);
-});
+  console.log(`Editor running on http://${HOST}:${PORT}`)
+})
