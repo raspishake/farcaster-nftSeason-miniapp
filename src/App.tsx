@@ -83,7 +83,7 @@ function BellIcon({ checked }: { checked: boolean }) {
         height: 20,
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "center"
+        justifyContent: "center",
       }}
       aria-hidden="true"
     >
@@ -107,15 +107,15 @@ function BellIcon({ checked }: { checked: boolean }) {
             width: 11,
             height: 11,
             borderRadius: 999,
-            background: "rgba(80, 200, 120, 0.95)",
+            background: "rgba(59, 130, 246, 0.95)", // blue
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 0 2px rgba(0,0,0,0.55)"
+            boxShadow: "0 0 0 2px rgba(0,0,0,0.55)",
           }}
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none">
-            <path d="M20 6L9 17l-5-5" stroke="black" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       ) : null}
@@ -128,8 +128,10 @@ export default function App() {
   // const [query, setQuery] = useState("")
   const [readyCalled, setReadyCalled] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [bellToast, setBellToast] = useState<string | null>(null)
 
   const fidCacheRef = useRef<Map<string, number>>(new Map())
+  const toastTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -143,7 +145,7 @@ export default function App() {
 
   const refreshNotificationState = async (): Promise<void> => {
     try {
-      const ctx = await (sdk as any).context
+      const ctx = await sdk.context
       const nd = (ctx as any)?.client?.notificationDetails
       const enabled = Boolean(nd?.token) && Boolean(nd?.url)
       setNotificationsEnabled(enabled)
@@ -162,6 +164,8 @@ export default function App() {
 
     return () => {
       document.removeEventListener("visibilitychange", onVis)
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+      toastTimerRef.current = null
     }
   }, [])
 
@@ -187,31 +191,6 @@ export default function App() {
     }
     return list
   }, [activeGroup])
-
-  // Search version (currently disabled)
-  //
-  // const filteredItems = useMemo(() => {
-  //   const q = query.trim().toLowerCase()
-  //
-  //   const base = resolvedItems
-  //     .filter((c: Collection) => c.id !== activeGroup.featuredId)
-  //     .filter((c: Collection) => {
-  //       if (!q) return true
-  //       const creators = c.creators.join(" ")
-  //       const hay = [c.name, c.network, c.miniapp ?? "", c.opensea ?? "", creators].join(" ").toLowerCase()
-  //       return hay.includes(q)
-  //     })
-  //
-  //   // ORDER: featured first (handled separately), NEW second, then alphabetical
-  //   base.sort((a: Collection, b: Collection) => {
-  //     const aNew = Boolean(a.highlight)
-  //     const bNew = Boolean(b.highlight)
-  //     if (aNew !== bNew) return aNew ? -1 : 1
-  //     return a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-  //   })
-  //
-  //   return base
-  // }, [resolvedItems, query, activeGroup.featuredId])
 
   // No-search version (active)
   const filteredItems: Collection[] = useMemo(() => {
@@ -252,7 +231,16 @@ export default function App() {
   const featuredPrimaryLabel = featured ? primaryLabelForCollection(featured, activeGroup.title, featuredPrimarySource) : ""
   const featuredSecondaryLabel = featured ? secondaryLabelForCollection(featured, featuredSecondarySource) : ""
 
+  const showBellToast = (msg: string) => {
+    setBellToast(msg)
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => setBellToast(null), 3200)
+  }
+
   const onBellClick = async (): Promise<void> => {
+    showBellToast(
+      "Never miss another NFT mint or allowlist on Farcaster! Tap the 3 dots menu to toggle Notifications ON/ OFF."
+    )
     try {
       // Best-effort: Warpcast surfaces notification controls via the ⋮ menu.
       // addMiniApp is harmless if already added; it nudges the right UX path.
@@ -277,7 +265,7 @@ export default function App() {
         color: "rgba(255,255,255,0.92)",
         display: "flex",
         justifyContent: "center",
-        padding: 14
+        padding: 14,
       }}
     >
       <style>
@@ -298,7 +286,7 @@ export default function App() {
           borderRadius: 18,
           background: "rgba(255,255,255,0.03)",
           boxShadow: "0 18px 55px rgba(0,0,0,0.55)",
-          overflow: "hidden"
+          overflow: "hidden",
         }}
       >
         {/* Header */}
@@ -324,7 +312,7 @@ export default function App() {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 <BellIcon checked={notificationsEnabled} />
@@ -342,7 +330,7 @@ export default function App() {
                       margin: 0,
                       color: "#8ab4ff",
                       cursor: "pointer",
-                      fontWeight: 900
+                      fontWeight: 900,
                     }}
                     type="button"
                   >
@@ -360,7 +348,7 @@ export default function App() {
                       margin: 0,
                       color: "#8ab4ff",
                       cursor: "pointer",
-                      fontWeight: 750
+                      fontWeight: 750,
                     }}
                     type="button"
                   >
@@ -413,8 +401,8 @@ export default function App() {
               primaryUrl={featuredPrimaryUrl}
               secondaryLabel={featuredSecondaryLabel}
               secondaryUrl={featuredSecondaryUrl}
-              onOpenPrimary={c => void onOpenPrimary(c)}
-              onOpenSecondary={c => void onOpenSecondary(c)}
+              onOpenPrimary={(c) => void onOpenPrimary(c)}
+              onOpenSecondary={(c) => void onOpenSecondary(c)}
               onHandleClick={onHandleClick}
             />
           ) : null}
@@ -438,8 +426,8 @@ export default function App() {
                   primaryUrl={primaryUrl}
                   secondaryLabel={secondaryLabel}
                   secondaryUrl={secondaryUrl}
-                  onOpenPrimary={cc => void onOpenPrimary(cc)}
-                  onOpenSecondary={cc => void onOpenSecondary(cc)}
+                  onOpenPrimary={(cc) => void onOpenPrimary(cc)}
+                  onOpenSecondary={(cc) => void onOpenSecondary(cc)}
                   onHandleClick={onHandleClick}
                 />
               )
@@ -454,7 +442,7 @@ export default function App() {
             borderTop: "1px solid rgba(255,255,255,0.10)",
             color: "rgba(255,255,255,0.72)",
             fontSize: 12.75,
-            lineHeight: 1.35
+            lineHeight: 1.35,
           }}
         >
           <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.88)" }}>It is NFT PFP PVP SZN on Farcaster!</div>
@@ -480,6 +468,35 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Phone-first in-app toast */}
+      {bellToast ? (
+        <div
+          onClick={() => setBellToast(null)}
+          style={{
+            position: "fixed",
+            left: 14,
+            right: 14,
+            bottom: 16,
+            zIndex: 9999,
+            padding: "12px 12px",
+            borderRadius: 14,
+            background: "rgba(0,0,0,0.82)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            color: "rgba(255,255,255,0.92)",
+            textAlign: "center",
+            fontSize: 13.5,
+            lineHeight: 1.25,
+            boxShadow: "0 18px 55px rgba(0,0,0,0.55)",
+            cursor: "pointer",
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          {bellToast}
+        </div>
+      ) : null}
     </div>
   )
 }
+
