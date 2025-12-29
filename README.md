@@ -1,6 +1,7 @@
 ````md
 # Vibe coding chat
-https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694470d3-747c-8329-92e7-5a5d27e50ae8
+- Initial development of miniapp: https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694470d3-747c-8329-92e7-5a5d27e50ae8
+- Adding in notifications: https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694ecc57-d8ec-8330-9b8f-a1d32bf741e8
 
 # NFT Season
 
@@ -157,6 +158,7 @@ public/thumbs/
 
 Notes:
 
+* I generally save original image as thumb/imagename-orig.png
 * Prefer square-ish source images.
 * Use a clean slug for the output name (`collectionImage` above).
 

@@ -13,7 +13,8 @@
     "splashBackgroundColor": "#000000",
     "themeColor": "#000000",
     "splashImageUrl": "https://nft-season.vercel.app/thumbs/miniapp.png",
-    "tags": ["nft", "pvp", "pfp", "protardio", "apostles"], 
+    "webhookUrl": "https://nft-season.vercel.app/api/farcaster/webhook",
+    "tags": ["nft", "pvp", "pfp", "protardio", "apostles"],
     "developer": {
       "name": "@raspishake",
       "url": "https://raspberryshake.org"

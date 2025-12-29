@@ -97,7 +97,7 @@ export const collectionsById: Record<string, Collection> = {
   "@madyak"
 ],
     miniapp: "https://farcaster.xyz/miniapps/2vgEwTqkDV2n/crytpodickpunks-mint",
-    opensea: "https://opensea.io/collection/cryptodickpunks-421264534",
+    opensea: "https://opensea.io/collection/cryptodickpunks-on-base",
     network: "Base",
     highlight: true,
     thumbnail: "/thumbs/dickpunkslive.png",
@@ -629,7 +629,7 @@ export const groups: Group[] = [
 
   {
     title: "Legacy",
-    description: "Mint has ended (or just lost momentum and never minted out).",
+    description: "Mint has ended (or just lost momentum and never minted out)",
     featuredId: "warplets",
     itemIds: [
   "waifulets",
