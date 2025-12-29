@@ -7,7 +7,7 @@
   "miniapp": {
     "version": "1",
     "name": "NFT Season",
-    "description": "One-stop-shop for new and ongoing NFT mints on Farcaster.",
+    "description": "NFT mints on Farcaster.",
     "homeUrl": "https://nft-season.vercel.app",
     "iconUrl": "https://nft-season.vercel.app/thumbs/miniapp.png",
     "splashBackgroundColor": "#000000",
