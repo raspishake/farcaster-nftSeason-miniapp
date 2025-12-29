@@ -1,51 +1,3 @@
-# Vibe coding chat
-- Initial development of miniapp: https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694470d3-747c-8329-92e7-5a5d27e50ae8
-- Adding in notifications: https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694ecc57-d8ec-8330-9b8f-a1d32bf741e8
-
-## What files to pass to chatGPT for editing different parts of the miniapp
-
-### Miniapp UI (what users see in Farcaster)
-* `src/App.tsx` (always)
-* `src/data/collections.ts`
-* `src/components/CollectionRow.tsx`
-* `src/components/FeaturedCard.tsx`
-* `src/components/Tabs.tsx`
-* `src/components/RichText.tsx`
-* `src/lib/urls.ts`
-* `src/lib/farcaster.ts`
-
-If UI behavior touches notifications:
-* `public/.well-known/farcaster.json` (only if we’re debugging manifest fields)
-
-### Editor web GUI (the protected admin UI you run via `npm run editor`)
-* `scripts/editor-server.ts` (always)
-* `scripts/db-init.ts` (if DB schema changes are involved)
-
-### Data validation, sorting, and build-time rules
-* `scripts/validate-data.ts`
-* `src/data/collections.ts`
-* `package.json` (only if we add scripts or change commands)
-
-### Thumbnail pipeline
-
-* `scripts/generate-thumbnails.ts`
-* `src/data/collections.ts`
-
-### Styling/layout bugs (truncation, overlap, right-justified labels, pulsing)
-
-* The component where the bug occurs:
-  * list row: `src/components/CollectionRow.tsx`
-  * featured: `src/components/FeaturedCard.tsx`
-* Plus `src/App.tsx` (because it defines keyframes and sometimes wrapper layout)
-
-### Minimal “starter pack” for any new UI thread
-
-* `src/App.tsx`
-* `src/components/CollectionRow.tsx`
-* `src/components/FeaturedCard.tsx`
-* `src/data/collections.ts`
-
-
 # NFT Season
 
 A Farcaster Mini App that curates new, live, and past NFT mints across the Farcaster ecosystem.
@@ -384,6 +336,57 @@ meta tag to `index.html`:
 ## Resources
 
 * [https://miniapps.farcaster.xyz/](https://miniapps.farcaster.xyz/)
+
+---
+
+## Vibe coding 
+
+### Links to conversations with LLM during history of code development
+- Initial development of miniapp: https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694470d3-747c-8329-92e7-5a5d27e50ae8
+- Adding in notifications: https://chatgpt.com/g/g-p-67ec51b2f62c8191814610600615be0d-crypto/c/694ecc57-d8ec-8330-9b8f-a1d32bf741e8
+
+### What files to pass to chatGPT for editing different parts of the miniapp
+
+#### Miniapp UI (what users see in Farcaster)
+* `src/App.tsx` (always)
+* `src/data/collections.ts`
+* `src/components/CollectionRow.tsx`
+* `src/components/FeaturedCard.tsx`
+* `src/components/Tabs.tsx`
+* `src/components/RichText.tsx`
+* `src/lib/urls.ts`
+* `src/lib/farcaster.ts`
+
+If UI behavior touches notifications:
+* `public/.well-known/farcaster.json` (only if we’re debugging manifest fields)
+
+#### Editor web GUI (the protected admin UI you run via `npm run editor`)
+* `scripts/editor-server.ts` (always)
+* `scripts/db-init.ts` (if DB schema changes are involved)
+
+#### Data validation, sorting, and build-time rules
+* `scripts/validate-data.ts`
+* `src/data/collections.ts`
+* `package.json` (only if we add scripts or change commands)
+
+#### Thumbnail pipeline
+
+* `scripts/generate-thumbnails.ts`
+* `src/data/collections.ts`
+
+#### Styling/layout bugs (truncation, overlap, right-justified labels, pulsing)
+
+* The component where the bug occurs:
+  * list row: `src/components/CollectionRow.tsx`
+  * featured: `src/components/FeaturedCard.tsx`
+* Plus `src/App.tsx` (because it defines keyframes and sometimes wrapper layout)
+
+#### Minimal “starter pack” for any new UI thread
+
+* `src/App.tsx`
+* `src/components/CollectionRow.tsx`
+* `src/components/FeaturedCard.tsx`
+* `src/data/collections.ts`
 
 ---
 
