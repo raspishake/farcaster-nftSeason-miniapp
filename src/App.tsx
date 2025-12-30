@@ -155,7 +155,9 @@ function InfoIcon() {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabKey>(groups[0]?.title ?? "NFTs")
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    groups.find(g => g.title === "Live")?.title ?? groups[0]?.title ?? "Live"
+  )
   // const [query, setQuery] = useState("")
   const [readyCalled, setReadyCalled] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
