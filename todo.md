@@ -1,0 +1,1 @@
+- editor = add ability to archive (which just moves the collection to collections.archive and do this for og nft

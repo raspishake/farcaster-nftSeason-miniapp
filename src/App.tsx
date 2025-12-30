@@ -227,16 +227,25 @@ export default function App() {
   }, [activeGroup])
 
   const filteredItems: Collection[] = useMemo(() => {
-    const base = resolvedItems.filter((c: Collection) => c.id !== activeGroup.featuredId)
+    const stripThe = (name: string) => name.replace(/^the\s+/i, "")
+
+    const base = resolvedItems.filter(
+      (c: Collection) => c.id !== activeGroup.featuredId
+    )
 
     base.sort((a: Collection, b: Collection) => {
       const aNew = Boolean(a.highlight)
       const bNew = Boolean(b.highlight)
       if (aNew !== bNew) return aNew ? -1 : 1
-      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+
+      return stripThe(a.name).localeCompare(
+        stripThe(b.name),
+        undefined,
+        { sensitivity: "base" }
+      )
     })
 
-    return base
+     return base
   }, [resolvedItems, activeGroup.featuredId])
 
   async function onOpenPrimary(c: Collection): Promise<void> {
