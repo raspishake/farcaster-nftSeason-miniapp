@@ -500,6 +500,8 @@ If UI behavior touches notifications:
 #### Editor web GUI (the protected admin UI you run via `npm run editor`)
 
 * `scripts/editor-server.ts` (always)
+* `src/data/collections.ts`
+* `src/data/collections-archive.ts`
 
 #### Notifications Manager (local admin UI you run via `npm run notifications`)
 
