@@ -537,6 +537,24 @@ If UI behavior touches notifications:
 * `src/components/FeaturedCard.tsx`
 * `src/data/collections.ts`
 
+### Prompt engineering
+
+If you want a feature added and for the underlying codebase/ functionality/ layout to be left unchanged, prompt with:
+
+```
+Surgical Patch Contract (SPC)
+
+1) Treat the attached file(s) as GOD baseline.
+2) Output the entire file(s) back.
+3) No refactors, no reformatting, no renaming, no layout/UI changes, no behavior changes except the explicitly requested feature.
+4) Preserve all existing whitespace, ordering, strings, CSS, and HTML.
+5) Changes must be the minimum diff possible.
+6) If you need extra files/interfaces to do this safely, ask first and do not guess.
+7) After editing, do a self-check: “List every non-feature change you made.” If that list is not empty, redo it.
+
+If you touch anything outside the requested feature, you owe me 10 pushups.
+```
+
 ---
 
 Mini App created by **@raspishake**
