@@ -627,7 +627,7 @@ export const groups: Group[] = [
   {
     title: "Warplet-ification",
     description: "NFTs that are derivatives of your Warplet(s)",
-    featuredId: "waifu-warplets",
+    featuredId: "petlets",
     itemIds: [
   "warplets",
   "warplet-mfer",
@@ -636,7 +636,7 @@ export const groups: Group[] = [
   "warplet-sweaters",
   "warplet-mash-up",
   "wordlets",
-  "petlets"
+  "waifu-warplets"
 ],
   },
 

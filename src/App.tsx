@@ -654,26 +654,6 @@ export default function App() {
                   </button>
                 </div>
 
-                <div style={{ marginTop: 4 }}>
-                  (Raspberry Shake, S.A.,{" "}
-                  <button
-                    onClick={() => void safeOpenUrl(sdk, "https://raspberryshake.org")}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      padding: 0,
-                      margin: 0,
-                      color: "#8ab4ff",
-                      cursor: "pointer",
-                      fontWeight: 800
-                    }}
-                    type="button"
-                  >
-                    https://raspberryshake.org
-                  </button>
-                  )
-                </div>
-
                 <div style={{ marginTop: 8, color: "rgba(255,255,255,0.65)" }}>Updated {BUILD_DATE}</div>
               </div>
 
