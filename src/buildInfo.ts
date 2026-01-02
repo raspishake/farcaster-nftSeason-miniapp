@@ -1,4 +1,4 @@
 // AUTO-GENERATED AT BUILD TIME
 // DO NOT EDIT MANUALLY
 
-export const BUILD_DATE = "Dec 31, 2025"
+export const BUILD_DATE = "Jan 02, 2026"
